@@ -898,6 +898,46 @@
   (dolist (input '("hello" "42" "" "d hello"))
     (should-not (launcher--calculator-query input))))
 
+(ert-deftest launcher-tools-sort-by-history-keeps-tool-order ()
+  (let ((launcher-selection-history '("c" "x" "a" "c")))
+    (should (equal '("c" "a" "b" "d") (launcher-sort-by-history (list "a" "b" "c" "d"))))))
+
+(ert-deftest launcher-tools-sort-function-offered-as-display-sort ()
+  (let ((launcher-sort-function #'launcher-sort-by-history))
+    (launcher-test--with-session nil nil
+      (let ((metadata (completion-metadata "" (launcher--results-collection session) nil)))
+        (should (eq 'launcher-result (completion-metadata-get metadata 'category)))
+        (should (eq #'launcher-sort-by-history
+                    (completion-metadata-get metadata 'display-sort-function)))))))
+
+(ert-deftest launcher-tools-function-result-runs-after-minibuffer ()
+  (let* ((ran 'unset)
+         (action (lambda () (setq ran (minibufferp)) nil)))
+    (should (eq action (launcher--result-execute
+                        (list :tool (launcher--tool-make :name "T" :submit (lambda (_) action))
+                              :item nil))))
+    (cl-letf (((symbol-function 'launcher--tools) #'ignore)
+              ((symbol-function 'launcher--entries) #'ignore)
+              ((symbol-function 'launcher--read) (lambda (&rest _) (cons action "x"))))
+      (launcher)
+      (should (eq ran nil)))
+    (let ((buffer (get-buffer-create " *launcher-test-target*")) shown)
+      (unwind-protect
+          (cl-letf (((symbol-function 'launcher--tools) #'ignore)
+                    ((symbol-function 'launcher--entries) #'ignore)
+                    ((symbol-function 'pop-to-buffer) (lambda (b &rest _) (setq shown b)))
+                    ((symbol-function 'launcher--read)
+                     (lambda (&rest _) (cons (lambda () buffer) "x"))))
+            (launcher)
+            (should (eq shown buffer)))
+        (kill-buffer buffer)))))
+
+(ert-deftest launcher-tools-calculator-runs-copy-hook ()
+  (let* ((kill-ring nil) (copied nil)
+         (launcher-after-copy-hook (list (lambda () (setq copied (car kill-ring))))))
+    (launcher--calculator-submit (car (launcher--calculator-query "1+2")))
+    (should (equal "3" copied))))
+
 (ert-deftest launcher-tools-calculator-invalid-keeps-input-and-copies-nothing ()
   (dolist (input '("3-1.5-" "1 +" "(1+2" "(" "1 2 + 3" "1..2 + 3"
                   "1 / 0" "1 / 0 +" "=" "= " "= (message 1)"))

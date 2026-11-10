@@ -58,6 +58,28 @@ also updates tools that were created earlier.  Values must not be references."
                 :value-type (choice (const nil) string (list (const :file) file)))
   :group 'launcher)
 
+(defcustom launcher-sort-function nil
+  "Function that orders launcher results, or nil to leave it to the UI.
+It receives the list of candidates and returns them reordered; it is
+offered to completion as the `display-sort-function', so it takes
+precedence over `vertico-sort-function' but not over
+`vertico-sort-override-function'.  Candidates are opaque keys of equal
+length, so length or alphabetical sorters order them arbitrarily.
+`launcher-sort-by-history' puts recent selections first and keeps the
+order tools produced for the rest."
+  :type '(choice (const :tag "Completion UI's sorter" nil)
+                 (function-item launcher-sort-by-history)
+                 function)
+  :group 'launcher)
+
+(defcustom launcher-after-copy-hook nil
+  "Hook run after an action put its result on the kill ring.
+The calculator runs it, as do tools whose purpose is copying text; a
+function here can, for instance, give the focus back to the application
+the result will be pasted in."
+  :type 'hook
+  :group 'launcher)
+
 (cl-defun launcher-search-tool (prefix &key name url icon)
   "Return a search tool entry for PREFIX, NAME, URL and optional ICON.
 PREFIX must be a nonempty token and NAME a nonblank label.
@@ -109,8 +131,11 @@ The tool's ICON appears on its prefix entry and is the default for
 candidates without :icon.  An explicit candidate :icon, including nil
 or an empty string, overrides it.  Text icon properties are preserved.
 SUBMIT receives the selected candidate and returns
-nil, a live non-minibuffer buffer, or (:input STRING).  Tools with a source
-require SUBMIT.  The former tool/candidate :function is not supported.
+nil, a live non-minibuffer buffer, (:input STRING) or a function.  A
+function is called without arguments after the minibuffer closes, for
+actions that prompt or change windows; a buffer it returns is shown.
+Tools with a source require SUBMIT.  The former tool/candidate
+:function is not supported.
 :debounce is a finite nonnegative delay for QUERY only (default 0).
 
 An explicit prefix routes exclusively to its tool.  A blank query shows
@@ -318,14 +343,17 @@ any other INPUT, which is ordinary app or web input."
   "Query apps, calculator, custom tools and web searches as you type.
 Empty input shows no candidates.  Return executes the selected result.
 A tool prefix stays in the input box.  Results that return a buffer
-are shown with `pop-to-buffer' after the minibuffer closes.
+are shown with `pop-to-buffer' after the minibuffer closes; results that
+return a function have it called then.
 With prefix argument REFRESH, rebuild the application index first.
 INITIAL, when supplied from Lisp, is the full starting input."
   (interactive "P")
   (let* ((tools (launcher--tools))
          (entries (launcher--entries refresh))
-         (answer (launcher--read entries tools initial)))
-    (when (bufferp (car answer)) (pop-to-buffer (car answer)))))
+         (answer (launcher--read entries tools initial))
+         (value (car answer)))
+    (when (functionp value) (setq value (funcall value)))
+    (when (and (bufferp value) (buffer-live-p value)) (pop-to-buffer value))))
 
 (provide 'launcher)
 ;;; launcher.el ends here

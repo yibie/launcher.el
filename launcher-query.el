@@ -10,6 +10,7 @@
 (require 'seq)
 
 (defvar launcher-fallback-search-url)
+(defvar launcher-sort-function)
 (declare-function launcher--launch "launcher" (app-path))
 (declare-function launcher--callable-p "launcher" (value))
 (declare-function launcher--route "launcher" (input tools))
@@ -47,6 +48,18 @@ Add this variable to `savehist-additional-variables' to persist selections.")
             (vertico--base "")
             (vertico-sort--history nil))
         (funcall sorter candidates)))))
+
+(defun launcher-sort-by-history (candidates)
+  "Put recently selected CANDIDATES first, newest first; keep the rest in order.
+Recency comes from `launcher-selection-history'.  For `launcher-sort-function'."
+  (let ((rank (make-hash-table :test #'equal)) (i 0) used rest)
+    (dolist (key launcher-selection-history)
+      (unless (gethash key rank) (puthash key (cl-incf i) rank)))
+    (dolist (candidate candidates)
+      (if-let* ((r (gethash (substring-no-properties candidate) rank)))
+          (push (cons r candidate) used)
+        (push candidate rest)))
+    (nconc (mapcar #'cdr (sort used #'car-less-than-car)) (nreverse rest))))
 
 (defun launcher--apps-candidates (entries)
   "Convert cached app ENTRIES into static candidates."
@@ -194,6 +207,7 @@ Invalid candidates retain the calculation identity and refuse execution."
     (unless value (user-error "Complete or correct the expression first"))
     (kill-new value)
     (message "Copied %s" value)
+    (run-hooks 'launcher-after-copy-hook)
     nil))
 
 (defun launcher--url-submit (candidate)
@@ -445,7 +459,9 @@ Inherit TOOL's icon only when ITEM has no :icon, leaving ITEM unchanged."
   (lambda (string pred action)
     (cond
      ((eq action 'metadata)
-      '(metadata (category . launcher-result)))
+      `(metadata (category . launcher-result)
+                 ,@(when launcher-sort-function
+                     `((display-sort-function . ,launcher-sort-function)))))
      ((eq action t)
       (seq-filter (lambda (candidate) (or (null pred) (funcall pred candidate)))
                   (mapcar (lambda (result) (plist-get result :candidate))
@@ -520,8 +536,9 @@ Inherit TOOL's icon only when ITEM has no :icon, leaving ITEM unchanged."
     (unless (or (null value)
                 (and (bufferp value) (buffer-live-p value) (not (minibufferp value)))
                 (and (proper-list-p value) (= (length value) 2)
-                     (eq (car value) :input) (stringp (cadr value))))
-      (error "Result action must return nil, a live buffer, or (:input STRING)"))
+                     (eq (car value) :input) (stringp (cadr value)))
+                (functionp value))
+      (error "Result action must return nil, a live buffer, (:input STRING) or a function"))
     value))
 
 (defun launcher--results-record-selection (result)

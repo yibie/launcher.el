@@ -398,6 +398,38 @@ itself opens nothing: no Dictionary.app, browser, second prompt, window or frame
   ~osx-dictionary--current-word~ and ~osx-dictionary--load-dir~, and
   reports a version that lacks them.
 
+* Additions in this fork
+
+This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
+
+- ~launcher-sort-function~ :: Orders results for any completion UI.  Set it
+  to ~launcher-sort-by-history~ to put recent selections first and keep the
+  order tools produced the rest in.  Default nil leaves sorting to the UI.
+- Function results :: A tool's ~:submit~ may return a function; ~launcher~
+  calls it after the minibuffer closes, so the action can prompt or change
+  windows.  A buffer it returns is shown.
+- ~launcher-after-copy-hook~ :: Runs after the calculator or a snippet put its
+  result on the kill ring, for instance to give the focus back to the
+  application the result will be pasted in.
+- ~launcher-snippets.el~ :: ~(launcher-snippets-tool "t")~ lists the headings
+  of ~launcher-snippets-file~ (Org) and copies a body after filling
+  placeholders such as ~{clipboard}~, ~{date offset="+1d"}~, ~{input:Name}~,
+  ~{choice:Tone|Formal,Casual}~ and ~{snippet:Signature}~; see
+  ~launcher-snippets-expand~.
+- ~launcher-web.el~ :: ~(launcher-sites-tool nil)~ offers the links of
+  ~launcher-sites-file~ (Org) beside applications;
+  ~(launcher-web-search-tool "w")~ lists one search per engine in
+  ~launcher-web-search-engines~.
+
+#+begin_src emacs-lisp
+(require 'launcher-snippets)
+(require 'launcher-web)
+(setq launcher-sort-function #'launcher-sort-by-history
+      launcher-tools (list (launcher-sites-tool nil)
+                           (launcher-web-search-tool "w")
+                           (launcher-snippets-tool "t")))
+#+end_src
+
 * Development
 
 Run the regression tests without Vertico, launching apps or opening a browser:
@@ -408,6 +440,7 @@ emacs --batch -Q -L . -L test -l test/launcher-tests.el \
   -l test/launcher-tools-tests.el -l test/launcher-candidates-tests.el \
   -l test/launcher-osx-dictionary-tests.el \
   -l test/launcher-icons-tests.el -l test/launcher-icons-worker-tests.el \
+  -l test/launcher-snippets-tests.el -l test/launcher-web-tests.el \
   -f ert-run-tests-batch-and-exit
 #+end_src
 
