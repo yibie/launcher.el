@@ -416,6 +416,13 @@ This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
   placeholders such as ~{clipboard}~, ~{date offset="+1d"}~, ~{input:Name}~,
   ~{choice:Tone|Formal,Casual}~ and ~{snippet:Signature}~; see
   ~launcher-snippets-expand~.
+- ~launcher-files.el~ :: ~(launcher-files-tool "f")~ searches the files under
+  ~launcher-files-directories~ without Spotlight: ripgrep writes their list to
+  ~launcher-files-cache-file~ in the background (every
+  ~launcher-files-refresh-interval~ seconds) and ~fzf --filter~ ranks it per
+  query.  ~(launcher-zoxide-tool "z")~ lists the directories zoxide knows,
+  most used first.  Both open with ~launcher-files-open-function~ (macOS
+  ~open~ by default).  Needs ~rg~, ~fzf~ and, for directories, ~zoxide~.
 - ~launcher-web.el~ :: ~(launcher-sites-tool nil)~ offers the links of
   ~launcher-sites-file~ (Org) beside applications;
   ~(launcher-web-search-tool "w")~ lists one search per engine in
@@ -441,6 +448,7 @@ emacs --batch -Q -L . -L test -l test/launcher-tests.el \
   -l test/launcher-osx-dictionary-tests.el \
   -l test/launcher-icons-tests.el -l test/launcher-icons-worker-tests.el \
   -l test/launcher-snippets-tests.el -l test/launcher-web-tests.el \
+  -l test/launcher-files-tests.el \
   -f ert-run-tests-batch-and-exit
 #+end_src
 
