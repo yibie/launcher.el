@@ -358,7 +358,8 @@ frame does.  For actions that show a buffer after launcher closes."
   "Query apps, calculator, custom tools and web searches as you type.
 Empty input shows no candidates.  Return executes the selected result.
 A tool prefix stays in the input box.  Results that return a buffer
-are shown with `pop-to-buffer' after the minibuffer closes; results that
+are shown with `pop-to-buffer' after the minibuffer closes, in a frame
+chosen by `launcher-editing-frame'; results that
 return a function have it called then.
 With prefix argument REFRESH, rebuild the application index first.
 INITIAL, when supplied from Lisp, is the full starting input."
@@ -368,7 +369,10 @@ INITIAL, when supplied from Lisp, is the full starting input."
          (answer (launcher--read entries tools initial))
          (value (car answer)))
     (when (functionp value) (setq value (funcall value)))
-    (when (and (bufferp value) (buffer-live-p value)) (pop-to-buffer value))))
+    (when (and (bufferp value) (buffer-live-p value))
+      ;; Launcher may run in a minibuffer-only popup frame.
+      (launcher-editing-frame)
+      (pop-to-buffer value))))
 
 (provide 'launcher)
 ;;; launcher.el ends here
