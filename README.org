@@ -1,8 +1,8 @@
 #+TITLE: launcher.el
 
 A Raycast-style launcher that lives in Emacs: applications, files, system
-commands, clipboard history, emoji, the dictionary, snippets and web
-searches, behind one input box and one key.
+commands, clipboard history, emoji, snippets and web searches, behind
+one input box and one key.
 
 This is yibie's fork of [[https://github.com/xiaoxinghu/launcher.el][xiaoxinghu/launcher.el]], by way of tuyafeng's
 ~develop~ branch.  The core is upstream's; the tools below are the ones I
@@ -23,7 +23,6 @@ Each tool sits behind a prefix.  Type the prefix, a space and a query.
 | ~> dark~           | system commands       | toggles dark mode                          |
 | ~c~                | clipboard history     | copies the entry again                     |
 | ~e heart~, ~e 红色~ | emoji and symbols     | copies the character                       |
-| ~d serendipity~    | Apple Dictionary      | shows the definition                       |
 | ~t~                | snippets              | fills the placeholders and copies the text |
 | ~w emacs~          | multi-engine search   | opens the search                           |
 | ~s~                | bookmarked sites      | opens the link                             |
@@ -68,13 +67,6 @@ entries with ~C-. SPC~ then ~C-. A j~ joins them, in order, into one copy.
 ~e~ searches the emoji names macOS ships, in English and Chinese, and every
 other Unicode character by name.  Emoji are drawn in color at text height.
 
-** Dictionary
-
-[[./assets/dictionary.png]]
-
-~d~ previews a definition from Apple's dictionaries as you type; Return
-shows the whole entry.  Needs the osx-dictionary package.
-
 ** Snippets
 
 [[./assets/snippets.png]]
@@ -106,7 +98,6 @@ Then register the tools you want:
 (require 'launcher-system)
 (require 'launcher-clipboard)
 (require 'launcher-characters)
-(require 'launcher-osx-dictionary)
 (require 'launcher-snippets)
 (require 'launcher-web)
 
@@ -122,9 +113,6 @@ Then register the tools you want:
             (launcher-system-tool ">")
             (launcher-clipboard-tool "c")
             (launcher-characters-tool "e")
-            '("d" :name "Dictionary"
-              :query launcher-osx-dictionary-query :debounce 0.2
-              :submit launcher-osx-dictionary-submit)
             (launcher-snippets-tool "t")))
 #+end_src
 
@@ -141,8 +129,7 @@ Then register the tools you want:
 - [[./examples/snippets.org][snippets.org]] :: the templates behind ~t~, with the placeholder
   syntax explained at the top.
 
-~f~ needs ~rg~ and ~fzf~, ~z~ needs ~zoxide~, and ~d~ needs the
-osx-dictionary package and Xcode's command line tools.  The rest of this
+~f~ needs ~rg~ and ~fzf~, and ~z~ needs ~zoxide~.  The rest of this
 file is the reference: upstream's core first, then this fork's additions.
 
 * Usage

@@ -10,7 +10,7 @@
 ;;           f  files          z  zoxide directories
 ;;           >  system commands
 ;;           c  clipboard      e  emoji and symbols
-;;           d  dictionary     t  snippets
+;;           t  snippets
 ;;
 ;; Paths below assume sites.org and snippets.org from this directory are
 ;; copied to ~/notes/.
@@ -18,8 +18,6 @@
 ;;; Code:
 
 (elpaca (launcher :host github :repo "yibie/launcher.el" :branch "main"))
-;; For the `d' dictionary tool.
-(elpaca osx-dictionary)
 
 (keymap-global-set "C-c l" #'launcher)
 
@@ -34,7 +32,6 @@
   (require 'launcher-system)
   (require 'launcher-clipboard)
   (require 'launcher-characters)
-  (require 'launcher-osx-dictionary)
 
   (setq launcher-sites-file (expand-file-name "~/notes/sites.org")
         launcher-snippets-file (expand-file-name "~/notes/snippets.org")
@@ -56,9 +53,6 @@
               (launcher-system-tool ">")
               (launcher-clipboard-tool "c")
               (launcher-characters-tool "e")
-              '("d" :name "Dictionary"
-                :query launcher-osx-dictionary-query :debounce 0.2
-                :submit launcher-osx-dictionary-submit)
               (launcher-snippets-tool "t")))
 
   ;; Recently chosen results first, the rest in the order tools gave them.

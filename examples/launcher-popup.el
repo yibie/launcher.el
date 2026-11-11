@@ -13,7 +13,7 @@
 ;; that only copied something (the calculator, a snippet, an emoji, a
 ;; clipboard entry), so you can paste it right away.  Other actions keep
 ;; the focus where they sent it: an application, a browser.  A result
-;; buffer (a dictionary definition) opens in a second popup frame; q
+;; buffer opens in a second popup frame; q
 ;; closes it and gives the focus back.
 ;;
 ;; The idea comes from https://emacs-china.org/t/emacs-alfred/32124.
