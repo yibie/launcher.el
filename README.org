@@ -423,6 +423,14 @@ This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
   query.  ~(launcher-zoxide-tool "z")~ lists the directories zoxide knows,
   most used first.  Both open with ~launcher-files-open-function~ (macOS
   ~open~ by default).  Needs ~rg~, ~fzf~ and, for directories, ~zoxide~.
+- ~launcher-system.el~ :: ~(launcher-system-tool ">")~ lists macOS system
+  commands from ~launcher-system-commands~: dark mode, display sleep, hidden
+  files, lock, sleep, restart, shut down, log out, caffeinate, empty Trash,
+  version and hardware information, external IP and System Settings panels.
+  Commands run after launcher closes; restart, shut down, log out and empty
+  Trash ask first.  A failing command shows its output in
+  ~launcher-system-error-buffer~.  ~launcher-system-define~ adds your own:
+  ~(launcher-system-define "Flush DNS" :shell "dscacheutil -flushcache")~.
 - ~launcher-web.el~ :: ~(launcher-sites-tool nil)~ offers the links of
   ~launcher-sites-file~ (Org) beside applications;
   ~(launcher-web-search-tool "w")~ lists one search per engine in
@@ -448,7 +456,7 @@ emacs --batch -Q -L . -L test -l test/launcher-tests.el \
   -l test/launcher-osx-dictionary-tests.el \
   -l test/launcher-icons-tests.el -l test/launcher-icons-worker-tests.el \
   -l test/launcher-snippets-tests.el -l test/launcher-web-tests.el \
-  -l test/launcher-files-tests.el \
+  -l test/launcher-files-tests.el -l test/launcher-system-tests.el \
   -f ert-run-tests-batch-and-exit
 #+end_src
 
