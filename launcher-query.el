@@ -527,18 +527,29 @@ Inherit TOOL's icon only when ITEM has no :icon, leaving ITEM unchanged."
           (launcher--result-for-candidate (launcher--query-session-selection session)))
         (car (launcher--query-session-results session)))))
 
+(defun launcher--buffer-request (value)
+  "Return VALUE as (BUFFER . ACTION) if it asks to show a buffer, else nil.
+VALUE is a buffer or (:buffer BUFFER [:action ACTION]), keys in any
+order.  BUFFER is returned whether or not it is live."
+  (pcase value
+    ((pred bufferp) (cons value nil))
+    ((or `(:buffer ,buffer) `(:buffer ,buffer :action ,action)
+         `(:action ,action :buffer ,buffer))
+     (and (bufferp buffer) (cons buffer action)))))
+
 (defun launcher--result-execute (result)
   "Execute RESULT and validate its action return value."
-  (let ((value (if (plist-member result :completion)
-                   (list :input (plist-get result :completion))
-                 (funcall (launcher--tool-submit (plist-get result :tool))
-                          (plist-get result :item)))))
+  (let* ((value (if (plist-member result :completion)
+                    (list :input (plist-get result :completion))
+                  (funcall (launcher--tool-submit (plist-get result :tool))
+                           (plist-get result :item))))
+         (buffer (car (launcher--buffer-request value))))
     (unless (or (null value)
-                (and (bufferp value) (buffer-live-p value) (not (minibufferp value)))
+                (and buffer (buffer-live-p buffer) (not (minibufferp buffer)))
                 (and (proper-list-p value) (= (length value) 2)
                      (eq (car value) :input) (stringp (cadr value)))
                 (functionp value))
-      (error "Result action must return nil, a live buffer, (:input STRING) or a function"))
+      (error "Result action must return nil, a live buffer, (:buffer BUFFER [:action ACTION]), (:input STRING) or a function"))
     value))
 
 (defun launcher--results-record-selection (result)

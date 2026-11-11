@@ -55,8 +55,9 @@ Set by `launcher-after-copy-hook' while the popup runs.")
 ;; A result buffer cannot be shown in the minibuffer-only frame, so it
 ;; gets a popup frame of its own, which inherits the application to give
 ;; the focus back to.
-(defun my/popup--display-buffer (buffer)
-  "Show BUFFER alone in the result popup frame; reuse one that is open."
+(defun my/popup--display-buffer (buffer &optional _action)
+  "Show BUFFER alone in the result popup frame; reuse one that is open.
+A result's display action is ignored: the frame shows only BUFFER."
   (let* ((origin (frame-parameter nil 'my-popup-origin))
          (frame (or (cl-find-if (lambda (f) (frame-parameter f 'my-popup-result))
                                 (frame-list))

@@ -131,9 +131,12 @@ The tool's ICON appears on its prefix entry and is the default for
 candidates without :icon.  An explicit candidate :icon, including nil
 or an empty string, overrides it.  Text icon properties are preserved.
 SUBMIT receives the selected candidate and returns
-nil, a live non-minibuffer buffer, (:input STRING) or a function.  A
-function is called without arguments after the minibuffer closes, for
-actions that prompt or change windows; a buffer it returns is shown.
+nil, a live non-minibuffer buffer, (:buffer BUFFER :action ACTION),
+(:input STRING) or a function.  In a buffer request :action is optional;
+it is a `display-buffer' action passed to `pop-to-buffer'.  A function
+is called without arguments after the minibuffer closes, for actions
+that prompt or change windows; a buffer or buffer request it returns
+is shown.
 Tools with a source require SUBMIT.  The former tool/candidate
 :function is not supported.
 :debounce is a finite nonnegative delay for QUERY only (default 0).
@@ -354,16 +357,19 @@ frame does.  For actions that show a buffer after launcher closes."
     frame))
 
 ;;;###autoload
-(defun launcher-display-buffer (buffer)
+(defun launcher-display-buffer (buffer &optional action)
   "Show BUFFER with `pop-to-buffer' in a frame with ordinary windows.
+ACTION is the `display-buffer' action the result asked for, or nil.
 The frame is chosen by `launcher-editing-frame'."
   (launcher-editing-frame)
-  (pop-to-buffer buffer))
+  (pop-to-buffer buffer action))
 
 (defcustom launcher-display-buffer-function #'launcher-display-buffer
-  "Function of one argument that shows a buffer a result returned.
-`launcher' calls it after the minibuffer closes.  A popup setup can
-show the buffer in a frame of its own instead."
+  "Function that shows a buffer a result returned.
+`launcher' calls it after the minibuffer closes, with the buffer and,
+when the result returned (:buffer BUFFER :action ACTION), with ACTION
+as a second argument.  A popup setup can show the buffer in a frame of
+its own instead."
   :type 'function
   :group 'launcher)
 
@@ -383,8 +389,12 @@ INITIAL, when supplied from Lisp, is the full starting input."
          (answer (launcher--read entries tools initial))
          (value (car answer)))
     (when (functionp value) (setq value (funcall value)))
-    (when (and (bufferp value) (buffer-live-p value))
-      (funcall launcher-display-buffer-function value))))
+    (pcase (launcher--buffer-request value)
+      (`(,buffer . ,action)
+       (when (buffer-live-p buffer)
+         (if action
+             (funcall launcher-display-buffer-function buffer action)
+           (funcall launcher-display-buffer-function buffer)))))))
 
 (provide 'launcher)
 ;;; launcher.el ends here

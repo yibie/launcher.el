@@ -252,8 +252,9 @@ tools participate.  Only selecting a result calls ~:submit~.
   remain available, with errors shown in the status area.
 - Every tool with a candidate source requires ~:submit~.  It receives the
   selected candidate, including its ~:data~, and returns nil after an action,
-  a live non-minibuffer buffer to display, or ~(:input STRING)~ to replace
-  the input and keep querying.  Submission errors keep input for retry.
+  a live non-minibuffer buffer to display, ~(:buffer BUFFER :action ACTION)~
+  to display it with a ~display-buffer~ action of its own, or
+  ~(:input STRING)~ to replace the input and keep querying.  Submission errors keep input for retry.
   Loading and querying must generate data without performing submit actions.
 - ~:debounce~ is a finite nonnegative delay in seconds, default 0, affecting
   dynamic queries only.  Static matches appear immediately.  New input
@@ -269,7 +270,10 @@ tools participate.  Only selecting a result calls ~:submit~.
   are recorded in ~minibuffer-history~ on exit.  ~M-p~/~M-n~ browse this same
   history across tools; ~savehist-mode~ can persist it.
 - Result buffers are displayed after the minibuffer closes through
-  ~pop-to-buffer~.  Launcher does not kill them.  Application discovery
+  ~launcher-display-buffer-function~, by default ~pop-to-buffer~ with the
+  result's ~:action~, if any.  For example, a tool that keeps the current
+  window returns
+  ~(list :buffer buf :action '((display-buffer-pop-up-window) (inhibit-same-window . t)))~.  Launcher does not kill them.  Application discovery
   failures do not prevent custom tools from working.
 
 *** Migration

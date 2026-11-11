@@ -207,7 +207,9 @@ A tool defines the results to show and what to do when one is selected:
 
 Each candidate is a plist such as
 ~(:id unique-id :title "Visible title" :subtitle "Detail" :data value)~.
-~:submit~ returns ~nil~ after an action, a buffer to show, ~(:input STRING)~ to
+~:submit~ returns ~nil~ after an action, a buffer to show,
+~(:buffer BUFFER :action ACTION)~ to show it with a ~display-buffer~ action,
+~(:input STRING)~ to
 keep the launcher open with new input, or, in this fork, a function to call
 after the launcher closes. See [[file:docs/reference.org][the reference]] for every rule and more examples.
 
