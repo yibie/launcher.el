@@ -128,6 +128,19 @@ Then register the tools you want:
             (launcher-snippets-tool "t")))
 #+end_src
 
+** My setup
+
+[[./examples/]] holds the configuration behind the screenshots, to copy from:
+
+- [[./examples/init-launcher.el][init-launcher.el]] :: every tool above, registered under its prefix.
+- [[./examples/launcher-popup.el][launcher-popup.el]] :: ~my/launcher-popup~ opens launcher in a small
+  frame from any application and gives the focus back afterwards.
+  [[./examples/raycast/summon-emacs-launcher.sh][raycast/summon-emacs-launcher.sh]] is the Raycast script command
+  that calls it from a global hotkey.
+- [[./examples/sites.org][sites.org]] :: the sites behind ~s~, grouped by Org headings.
+- [[./examples/snippets.org][snippets.org]] :: the templates behind ~t~, with the placeholder
+  syntax explained at the top.
+
 ~f~ needs ~rg~ and ~fzf~, ~z~ needs ~zoxide~, and ~d~ needs the
 osx-dictionary package and Xcode's command line tools.  The rest of this
 file is the reference: upstream's core first, then this fork's additions.

@@ -1,0 +1,180 @@
+#+title: 快速模板
+#+filetags: :launcher:
+
+# Templates for `launcher-snippets-tool' (set `launcher-snippets-file' to this file).
+# launcher 里输入 "t " 列出全部模板，回车填好占位符并复制到剪贴板，焦点回到原应用后直接 ⌘V。
+# 每个有正文的标题是一个模板；只用来分组、下面没有正文的标题会被跳过。
+# 正文里不要有以 * 开头的行，那会被当成下一个模板的标题（列表请用 -）。
+#
+# 自动填，不询问：
+#   {clipboard}  {date}  {time}  {datetime}  {day}（星期五）  {uuid}
+#   日期时间可加选项：{date offset="+7d"}  {time offset="-2h"}  {date format="%Y/%m/%d"}
+#   offset 单位：m 分钟  h 小时  d 天  w 周  M 月  y 年（区分大小写）；format 见 format-time-string
+#
+# 询问（同一个提示只问一次，按书写顺序问）：
+#   {input:提示}                      单行，空白输入框
+#   {input:提示|默认文字}             预填，回车接受或先改
+#   {input:提示|clipboard}            预填剪贴板；也可写 date、time、date offset="+7d" 等
+#   {multi:提示}  {multi:提示|默认}   多行，C-j 换行，回车结束
+#   {choice:提示|甲,乙,丙}            从选项里选，默认第一项
+#   {optional:提示} ... {/optional}   回答 y 才保留这一段；不能嵌套
+#
+# 引用其他模板（共享答案）：{snippet:模板名}
+#
+# 修饰符（按顺序应用，竖线两边要有空格）：{clipboard | trim | uppercase}
+#   trim  uppercase  lowercase  capitalize  oneline（合成一行）  quote（每行加 "> "）
+#   percent-encode（网址编码）  json-stringify（JSON 字符串）
+
+* 引用
+** 引用链接
+{clipboard | trim | quote}
+> —— 摘录于 {date}
+
+** Markdown 链接
+[{input:标题}]({clipboard | oneline})
+
+** Org 链接
+[[{clipboard | oneline}][{input:标题}]]
+
+** 摘录卡片
+{clipboard | trim | quote}
+
+来源：{input:来源}
+想法：{input:想法}
+
+* 日常
+** 日期时间
+{date} {time}
+
+** 今天
+{date} {day}
+
+** 待办
+- [ ] {input:待办|clipboard | oneline}（{date}）
+
+** 带截止日的待办
+- [ ] {input:待办|clipboard | oneline}（截止 {input:截止日期|date offset="+7d"}）
+
+* 沟通
+** 邮件回复
+{input:称呼}，你好：
+
+{multi:正文}
+{optional:需要对方确认吗}
+
+麻烦确认后回复，谢谢。
+{/optional}
+
+{choice:结尾|祝好,谢谢,此致敬礼}
+
+** 跟进提醒
+{input:称呼}，你好：
+
+想跟进一下「{input:事项}」的进展，方便的话请在 {input:希望回复日期|date offset="+3d"} 前告诉我当前情况。谢谢！
+
+** 会议纪要
+# {date} {day} 会议：{input:主题}
+
+- 参会：{input:参会人}
+
+结论：
+- 
+
+待办：
+- [ ] （负责人，截止 {date offset="+7d"}）
+
+** 周报
+# 周报（{input:起始日期|date offset="-6d"} ～ {date}）
+
+本周完成：
+- 
+
+下周计划：
+- 
+
+需要协助：
+- 
+
+* 开发
+** Commit 信息
+{choice:类型|feat,fix,docs,refactor,test,chore}: {input:说明}
+
+** Bug 报告
+环境：{input:环境|macOS}
+版本：{input:版本}
+
+复现步骤：
+1. 
+
+期望结果：
+
+实际结果：
+{optional:附上剪贴板里的报错}
+
+```
+{clipboard | trim}
+```
+{/optional}
+
+** PR 描述
+动机：{input:为什么要改}
+
+改动：
+- 
+
+验证：
+- 
+
+风险与回滚：
+- 
+
+** Markdown 代码块
+```{choice:语言|elisp,bash,python,swift,javascript,text}
+{clipboard | trim}
+```
+
+** Org 代码块
+#+begin_src {choice:语言|emacs-lisp,bash,python,swift,javascript,text}
+{clipboard | trim}
+#+end_src
+
+** UUID
+{uuid}
+
+* 写作
+** Hugo 文章头
+---
+title: "{input:标题}"
+date: {date format="%Y-%m-%dT%H:%M:%S%:z"}
+draft: true
+---
+
+* AI 提示词
+** 翻译
+把下面的内容翻译成{choice:目标语言|中文,英文,日文}。保留原有格式、代码和专有名词，只输出译文。
+
+{clipboard | trim}
+
+** 总结
+用{choice:长度|三句话,五个要点,一段话}总结下面的内容，先给结论，不要加原文没有的信息。
+
+{clipboard | trim}
+
+** 润色
+润色下面的文字，让它{choice:风格|更简洁,更正式,更口语}。保留事实和术语，不要新增内容。
+
+{clipboard | trim}
+
+** 解释代码
+解释下面这段代码做什么、为什么这样写，并指出可能的问题。
+
+```
+{clipboard | trim}
+```
+
+** 代码审查
+审查下面的改动，只报告会造成实际问题的缺陷。每条给出位置、问题和触发条件。
+
+```
+{clipboard | trim}
+```
