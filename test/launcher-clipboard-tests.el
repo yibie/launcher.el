@@ -44,13 +44,27 @@
     (should (launcher--tools))
     (should (equal "😀" (plist-get (car results) :data)))
     (should (equal "U+1F600" (plist-get (car results) :subtitle)))
-    (should (string-prefix-p "😀  Grinning Face" (plist-get (car results) :title)))
+    (should (string-suffix-p "Grinning Face" (plist-get (car results) :title)))
+    (should (eq 'launcher-characters-emoji
+                (get-text-property 0 'face (plist-get (car results) :title))))
     (should-not (launcher-characters--query "   "))
     (should-not (launcher-characters--query "zzzz qqqq"))))
 
+(ert-deftest launcher-characters-emoji-are-fully-qualified ()
+  (skip-unless (launcher-characters--emoji))
+  (let* ((results (launcher-characters--query "red heart"))
+         (data (mapcar (lambda (c) (plist-get c :data)) results)))
+    (should (equal "❤️" (car data)))
+    (should (equal "U+2764 U+FE0F" (plist-get (car results) :subtitle)))
+    ;; The bare symbol is not offered a second time.
+    (should-not (member "❤" (mapcar (lambda (c) (plist-get c :data))
+                                    (launcher-characters--query "heavy black heart"))))))
+
 (ert-deftest launcher-characters-symbols-and-limit ()
-  (should (member "→" (mapcar (lambda (c) (plist-get c :data))
-                              (launcher-characters--query "rightwards arrow"))))
+  (let ((arrow (seq-find (lambda (c) (equal "→" (plist-get c :data)))
+                         (launcher-characters--query "rightwards arrow"))))
+    (should arrow)
+    (should-not (get-text-property 0 'face (plist-get arrow :title))))
   (let ((launcher-characters-limit 5))
     (should (= 5 (length (launcher-characters--query "arrow"))))))
 

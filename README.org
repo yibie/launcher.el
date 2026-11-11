@@ -437,10 +437,13 @@ This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
 - ~launcher-clipboard.el~ :: ~(launcher-clipboard-tool "c")~ lists the kill
   ring, newest first, with text copied in other applications folded in.
   RET copies the entry again and runs ~launcher-after-copy-hook~.
-- ~launcher-characters.el~ :: ~(launcher-characters-tool "e")~ finds Unicode
-  characters by name (~ucs-names~): every query word must occur in the name;
-  the exact name comes first, then emoji, then shorter names.  RET copies
-  the character and runs ~launcher-after-copy-hook~.
+- ~launcher-characters.el~ :: ~(launcher-characters-tool "e")~ finds emoji
+  (from Emacs's emoji.el, fully qualified, e.g. ❤️) and other Unicode
+  characters (~ucs-names~) by name: every query word must occur in the name;
+  the exact name comes first, then emoji, then shorter names.  Emoji are
+  drawn with the face ~launcher-characters-emoji~ (a color emoji font), so
+  they keep their color where the default font has a plain glyph.  RET
+  copies the character and runs ~launcher-after-copy-hook~.
 - ~launcher-web.el~ :: ~(launcher-sites-tool nil)~ offers the links of
   ~launcher-sites-file~ (Org) beside applications;
   ~(launcher-web-search-tool "w")~ lists one search per engine in
