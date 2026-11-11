@@ -14,6 +14,12 @@
 ;;                 :query launcher-osx-dictionary-query :debounce 0.2
 ;;                 :submit launcher-osx-dictionary-submit)))
 ;;
+;; By default (`launcher-osx-dictionary-format' `html') a lookup renders
+;; each entry's HTML with `shr', laid out by the dictionary's own style
+;; sheet, and searches each enabled dictionary separately; the first one
+;; builds a small helper for that (`launcher-osx-dictionary--html-helper').
+;; Set the format to `text' for osx-dictionary's plain text instead.
+;;
 ;; Loading this file loads neither osx-dictionary nor its helper; the
 ;; first lookup does, and reports what is missing instead of looking up.
 ;; Needs macOS, osx-dictionary and Xcode's command line tools, with which
@@ -31,6 +37,9 @@
 (require 'launcher)
 (require 'nadvice)
 (require 'url-util)
+(require 'cl-lib)
+(require 'dom)
+(require 'shr)
 
 (defvar osx-dictionary-cli)
 (defvar osx-dictionary--load-dir)
@@ -41,6 +50,9 @@
 (declare-function osx-dictionary--insert-search-result "osx-dictionary" (word))
 (declare-function osx-dictionary--current-dictionary-description "osx-dictionary" ())
 (declare-function osx-dictionary-select-dictionary "osx-dictionary" (&optional dictionary))
+(declare-function osx-dictionary--display-name-for "osx-dictionary" (real-name))
+(defvar osx-dictionary-allowed-dictionaries)
+(defvar osx-dictionary-separator)
 
 (defcustom launcher-osx-dictionary-buffer-name "*Launcher Dictionary*"
   "Name of the buffer `launcher-osx-dictionary-lookup' shows results in.
@@ -141,7 +153,306 @@ osx-dictionary-select-dictionary" osx-dictionary-current-dictionary))
            (error "No definition for %S (searched: %s)" word
                   (osx-dictionary--current-dictionary-description))))))
 
+(defcustom launcher-osx-dictionary-format 'html
+  "How lookups render definitions.
+`html' renders each entry's HTML with `shr', laid out as the
+dictionary's own style sheet lays it out (headwords, senses and examples
+on lines of their own), searching each dictionary separately.  `text'
+uses osx-dictionary's plain text, in which an entry's parts run together."
+  :type '(choice (const :tag "Entry HTML, rendered" html)
+                 (const :tag "osx-dictionary's plain text" text))
+  :group 'launcher)
+
+(defcustom launcher-osx-dictionary-html-width 78
+  "Column the `html' format fills definitions to."
+  :type 'natnum
+  :group 'launcher)
+
+(defconst launcher-osx-dictionary--html-helper-source "// launcher-dictionary-html: print Apple dictionary records as HTML.
+// Use: launcher-dictionary-html [-d NAME]... WORD
+// Without -d, search each dictionary enabled in Dictionary.app.
+// Each record: a line \"\\x1dNAME\", then the record's HTML, then a newline.
+#import <Foundation/Foundation.h>
+#import <CoreServices/CoreServices.h>
+
+extern CFArrayRef DCSCopyAvailableDictionaries(void);
+extern CFStringRef DCSDictionaryGetName(DCSDictionaryRef dictionary);
+extern CFURLRef DCSDictionaryGetURL(DCSDictionaryRef dictionary);
+extern CFArrayRef DCSCopyRecordsForSearchString(DCSDictionaryRef dictionary,
+                                                CFStringRef string, void *, void *);
+extern CFStringRef DCSRecordCopyData(CFTypeRef record, long version);
+
+int main(int argc, char *argv[]) {
+  @autoreleasepool {
+    NSMutableArray *names = [NSMutableArray array];
+    int i = 1;
+    while (i + 1 < argc && strcmp(argv[i], \"-d\") == 0) {
+      [names addObject:[NSString stringWithUTF8String:argv[i + 1]]];
+      i += 2;
+    }
+    if (i >= argc || argv[i][0] == '\\0') return 2;
+    NSString *word = [NSString stringWithUTF8String:argv[i]];
+    NSArray *available = (NSArray *)DCSCopyAvailableDictionaries();
+    NSMutableArray *dicts = [NSMutableArray array];
+    if ([names count] > 0) {
+      for (NSString *name in names)
+        for (id dict in available)
+          if ([(NSString *)DCSDictionaryGetName((DCSDictionaryRef)dict) isEqualToString:name])
+            [dicts addObject:dict];
+    } else {
+      NSDictionary *prefs =
+          [[NSUserDefaults standardUserDefaults] persistentDomainForName:@\"com.apple.DictionaryServices\"];
+      for (NSString *path in prefs[@\"DCSActiveDictionaries\"]) {
+        NSString *wanted = [[path stringByResolvingSymlinksInPath] lastPathComponent];
+        for (id dict in available) {
+          NSURL *url = (NSURL *)DCSDictionaryGetURL((DCSDictionaryRef)dict);
+          if ([[[url path] lastPathComponent] isEqualToString:wanted]) {
+            [dicts addObject:dict];
+            break;
+          }
+        }
+      }
+    }
+    for (id dict in dicts) {
+      NSString *name = (NSString *)DCSDictionaryGetName((DCSDictionaryRef)dict);
+      NSArray *records = (NSArray *)DCSCopyRecordsForSearchString(
+          (DCSDictionaryRef)dict, (CFStringRef)word, NULL, NULL);
+      for (id record in records) {
+        NSString *html = (NSString *)DCSRecordCopyData((CFTypeRef)record, 1);
+        if ([html length] == 0) continue;
+        printf(\"\\x1d%s\\n%s\\n\", [name UTF8String], [html UTF8String]);
+      }
+    }
+  }
+  return 0;
+}
+"
+  "Source of the helper that prints dictionary entries as HTML.")
+
+(defconst launcher-osx-dictionary--html-helper-name "launcher-dictionary-html-1"
+  "File name of the built HTML helper; the suffix changes with its source.")
+
+(defcustom launcher-osx-dictionary-html-helper-directory
+  (file-name-directory (or load-file-name buffer-file-name default-directory))
+  "Directory the first `html' lookup builds the HTML helper in."
+  :type 'directory
+  :group 'launcher)
+
+(defun launcher-osx-dictionary--html-helper ()
+  "Return the HTML helper, building it first if it is missing.
+Signal an error saying why it could not be built."
+  (let ((output (expand-file-name launcher-osx-dictionary--html-helper-name
+                                  launcher-osx-dictionary-html-helper-directory)))
+    (unless (file-executable-p output)
+      (unless (and (executable-find "clang") (launcher-osx-dictionary--developer-tools-p))
+        (error "Building the dictionary HTML helper needs the Xcode command line tools: \
+run xcode-select --install"))
+      (unless (file-writable-p output)
+        (error "Cannot build the dictionary HTML helper: %s is not writable"
+               (abbreviate-file-name launcher-osx-dictionary-html-helper-directory)))
+      (let ((source (make-temp-file "launcher-dictionary-html" nil ".m"
+                                    launcher-osx-dictionary--html-helper-source)))
+        (unwind-protect
+            (with-temp-buffer
+              (let ((status (call-process "clang" nil t nil "-O2"
+                                          "-framework" "CoreServices" "-framework" "Foundation"
+                                          source "-o" output)))
+                (unless (and (eql status 0) (file-executable-p output))
+                  (error "Building the dictionary HTML helper failed (%s): %s" status
+                         (string-trim (buffer-substring (point-min)
+                                                        (min (point-max) 1000)))))))
+          (delete-file source))))
+    output))
+
+(defun launcher-osx-dictionary--html-dictionaries ()
+  "Return the dictionary names to search, as osx-dictionary is set, or nil.
+Nil means every dictionary enabled in Dictionary.app."
+  (cond (osx-dictionary-current-dictionary
+         (list osx-dictionary-current-dictionary))
+        ((bound-and-true-p osx-dictionary-allowed-dictionaries)
+         (mapcar (lambda (entry) (if (consp entry) (car entry) entry))
+                 osx-dictionary-allowed-dictionaries))))
+
+(defun launcher-osx-dictionary--html-records (helper word)
+  "Return the entries HELPER finds for WORD, as (DICTIONARY . HTML) pairs."
+  (with-temp-buffer
+    (let ((status (apply #'call-process helper nil '(t nil) nil
+                         (append (mapcan (lambda (name) (list "-d" name))
+                                         (launcher-osx-dictionary--html-dictionaries))
+                                 (list word)))))
+      (unless (eql status 0)
+        (error "The dictionary HTML helper failed (%s)" status))
+      (mapcar (lambda (record)
+                (let ((newline (or (string-search "\n" record) (length record))))
+                  (cons (substring record 0 newline)
+                        (substring record (min (length record) (1+ newline))))))
+              (split-string (buffer-string) "\x1d" t)))))
+
+;; Dictionary entries are mostly nested spans; their style sheets decide
+;; which parts start lines and which are hidden.  Only `display' rules
+;; matter here, matched approximately: a selector is a chain of compounds
+;; (TAG, .CLASS or TAG.CLASS...) joined by descendant or `>' combinators,
+;; matched greedily, and a selector using anything else is ignored.
+
+(defvar launcher-osx-dictionary--css-cache (make-hash-table :test #'equal)
+  "Display rules of each dictionary's style sheet, by style sheet text.")
+
+(defun launcher-osx-dictionary--css-compound (string)
+  "Return STRING, a simple compound selector, as (TAG . CLASSES), or nil."
+  (when (string-match "\\`\\([a-zA-Z][a-zA-Z0-9]*\\)?\\(\\(?:\\.[-_a-zA-Z0-9]+\\)*\\)\\'" string)
+    (let ((tag (match-string 1 string))
+          (classes (split-string (match-string 2 string) "\\." t)))
+      (when (or tag classes)
+        (cons (and tag (intern (downcase tag))) classes)))))
+
+(defun launcher-osx-dictionary--css-drop-at-blocks (css)
+  "Return CSS without its @-rule blocks, such as @media print {...}."
+  (with-temp-buffer
+    (insert css)
+    (goto-char (point-min))
+    (while (re-search-forward "@[^{};]*{" nil t)
+      (let ((start (match-beginning 0)) (depth 1))
+        (while (and (> depth 0) (re-search-forward "[{}]" nil 'move))
+          (setq depth (if (eq (char-before) ?{) (1+ depth) (1- depth))))
+        (delete-region start (point))))
+    (buffer-string)))
+
+(defun launcher-osx-dictionary--css-rules (css)
+  "Return the `display' rules of CSS, a style sheet, in source order.
+Each is (COMPOUNDS SPECIFICITY DISPLAY), COMPOUNDS rightmost first; each
+compound after the first is (CHILD TAG . CLASSES), CHILD non-nil when it
+must be the parent of the compound before it."
+  (or (gethash css launcher-osx-dictionary--css-cache)
+      (puthash
+       css
+       (let ((css (launcher-osx-dictionary--css-drop-at-blocks
+                   (replace-regexp-in-string "/\\*\\(?:.\\|\n\\)*?\\*/" "" css)))
+             (start 0) rules)
+         (while (string-match "\\([^{}]+\\){\\([^{}]*\\)}" css start)
+           (setq start (match-end 0))
+           (let ((selectors (match-string 1 css))
+                 (body (match-string 2 css)))
+             (when (string-match "display[ \t\n]*:[ \t\n]*\\([-a-z]+\\)" body)
+               (let ((display (intern (match-string 1 body))))
+                 (dolist (selector (split-string selectors ","))
+                   (let* ((parts (split-string (replace-regexp-in-string ">" " > " selector)))
+                          (compounds nil) (child nil) (valid parts))
+                     (dolist (part parts)
+                       (if (equal part ">")
+                           (setq child t)
+                         (let ((compound (launcher-osx-dictionary--css-compound part)))
+                           (unless compound (setq valid nil))
+                           (push (cons child compound) compounds)
+                           (setq child nil))))
+                     ;; COMPOUNDS is rightmost first, each with the combinator
+                     ;; to its left; matching right to left, that combinator
+                     ;; relates it to the next compound, so shift it there.
+                     (setq compounds
+                           (cons (cdar compounds)
+                                 (cl-loop for prev in compounds
+                                          for c in (cdr compounds)
+                                          collect (cons (car prev) (cdr c)))))
+                     (when (and valid compounds)
+                       (push (list compounds
+                                   (apply #'+ (mapcar (lambda (c)
+                                                        (+ (* 10 (length (cdr c)))
+                                                           (if (car c) 1 0)))
+                                                      (cons (car compounds)
+                                                            (mapcar #'cdr (cdr compounds)))))
+                                   display)
+                             rules))))))))
+         (nreverse rules))
+       launcher-osx-dictionary--css-cache)))
+
+(defun launcher-osx-dictionary--css-match-p (compound node)
+  "Return non-nil if NODE, a DOM element, matches COMPOUND."
+  (and (or (null (car compound)) (eq (car compound) (dom-tag node)))
+       (let ((classes (split-string (or (dom-attr node 'class) ""))))
+         (seq-every-p (lambda (class) (member class classes)) (cdr compound)))))
+
+(defun launcher-osx-dictionary--css-display (rules node ancestors)
+  "Return the `display' RULES give NODE, whose ANCESTORS are innermost first."
+  (let (best best-specificity)
+    (dolist (rule rules)
+      (pcase-let ((`(,compounds ,specificity ,display) rule))
+        (when (and (launcher-osx-dictionary--css-match-p (car compounds) node)
+                   (let ((rest (cdr compounds)) (up ancestors) (failed nil))
+                     (while (and rest up (not failed))
+                       (pcase-let ((`(,child . ,compound) (car rest)))
+                         (cond ((launcher-osx-dictionary--css-match-p compound (car up))
+                                (setq rest (cdr rest)))
+                               (child (setq failed t))))
+                       (setq up (cdr up)))
+                     (and (not failed) (null rest)))
+                   (or (null best) (>= specificity best-specificity)))
+          (setq best display best-specificity specificity))))
+    best))
+
+(defun launcher-osx-dictionary--css-apply (rules node &optional ancestors)
+  "Return a copy of NODE laid out by RULES for `shr', or nil to drop it.
+Hidden elements are dropped; block-level ones become `div', inline
+ones `span'.  ANCESTORS are NODE's, innermost first."
+  (if (not (consp node))
+      node
+    (let ((tag (dom-tag node)))
+      (unless (memq tag '(head style script comment))
+        (let ((display (launcher-osx-dictionary--css-display rules node ancestors)))
+          (unless (eq display 'none)
+            (let ((children (delq nil (mapcar (lambda (child)
+                                                (launcher-osx-dictionary--css-apply
+                                                 rules child (cons node ancestors)))
+                                              (dom-children node)))))
+              `(,(cond ((memq display '(block list-item table flex grid)) 'div)
+                       ((memq display '(inline inline-block)) 'span)
+                       (t tag))
+                ,(dom-attributes node)
+                ,@children))))))))
+
+(defun launcher-osx-dictionary--render-html (html)
+  "Return HTML, one dictionary entry, rendered as text by `shr'."
+  (let* ((dom (with-temp-buffer
+                (insert html)
+                (libxml-parse-html-region (point-min) (point-max))))
+         (css (mapconcat (lambda (style)
+                           (apply #'concat (seq-filter #'stringp (dom-children style))))
+                         (dom-by-tag dom 'style) "\n"))
+         (rules (launcher-osx-dictionary--css-rules css))
+         (body (or (car (dom-by-tag dom 'body)) dom)))
+    (with-temp-buffer
+      (let ((shr-width launcher-osx-dictionary-html-width)
+            (shr-use-fonts nil)
+            (shr-inhibit-images t)
+            (shr-use-colors nil))
+        (shr-insert-document (launcher-osx-dictionary--css-apply rules body)))
+      (string-trim (buffer-string)))))
+
+(defun launcher-osx-dictionary--search-html (word)
+  "Return WORD's definitions rendered from their HTML, as a string, or nil."
+  (when-let* ((records (launcher-osx-dictionary--html-records
+                        (launcher-osx-dictionary--html-helper) word)))
+    (let (last)
+      (with-temp-buffer
+        (pcase-dolist (`(,dictionary . ,html) records)
+          (if (equal dictionary last)
+              (insert osx-dictionary-separator)
+            (unless (bobp) (insert "\n"))
+            (insert (propertize (if (fboundp 'osx-dictionary--display-name-for)
+                                    (osx-dictionary--display-name-for dictionary)
+                                  dictionary)
+                                'font-lock-face 'osx-dictionary-dictionary-name)
+                    "\n")
+            (setq last dictionary))
+          (insert (launcher-osx-dictionary--render-html html) "\n"))
+        (buffer-string)))))
+
 (defun launcher-osx-dictionary--search (word)
+  "Return WORD's definitions as a string, in `launcher-osx-dictionary-format'.
+Signal an error if it finds none."
+  (or (and (eq launcher-osx-dictionary-format 'html)
+           (launcher-osx-dictionary--search-html word))
+      (launcher-osx-dictionary--search-text word)))
+
+(defun launcher-osx-dictionary--search-text (word)
   "Return osx-dictionary's rendering of WORD's definitions, as a string.
 Signal an error if it finds none."
   (let ((helper (or (launcher-osx-dictionary--find-helper)

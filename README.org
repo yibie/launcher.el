@@ -541,6 +541,13 @@ This fork (~yibie/launcher.el~, branch ~main~) adds to upstream:
 - Function results :: A tool's ~:submit~ may return a function; ~launcher~
   calls it after the minibuffer closes, so the action can prompt or change
   windows.  A buffer it returns is shown.
+- Dictionary layout :: ~launcher-osx-dictionary.el~ renders each entry's
+  HTML with ~shr~, following the dictionary's own style sheet, so senses,
+  examples and notes start lines of their own instead of running
+  together.  It searches each enabled dictionary separately: macOS's
+  merged search returns one record per word, for some words only a
+  cross-reference.  ~launcher-osx-dictionary-format~ ~text~ restores
+  osx-dictionary's plain text.
 - ~launcher-display-buffer-function~ :: Shows a buffer a result returned.
   The default, ~launcher-display-buffer~, uses ~pop-to-buffer~ in an
   ordinary frame (~launcher-editing-frame~), so a dictionary definition

@@ -99,6 +99,8 @@ Afterwards, kill the result buffers and delete the helper."
             (osx-dictionary-search-log-file nil)
             (osx-dictionary-last-dictionary-file nil)
             (osx-dictionary-previous-window-configuration nil)
+            ;; These checks cover the package's text; see the html checks.
+            (launcher-osx-dictionary-format 'text)
             ;; The fake helper works anywhere.
             (system-type 'darwin))
        (launcher-osx-dictionary-test--write-helper)
@@ -531,5 +533,72 @@ tools: run xcode-select --install"
                        launcher-osx-dictionary-open-dictionary
                        launcher-osx-dictionary-select-dictionary))
       (should-error (call-interactively command) :type 'user-error))))
+
+;;; HTML format
+
+(defconst launcher-osx-dictionary-test--html
+  "<html><head><style>/* a {display:none} */
+.entry .sense { display: block }
+.box > span { display: block; color: red }
+.entry .hidden, .label:hover { display:none }
+@media print { .entry { display: none } }
+</style></head><body><span class=\"entry\"><span class=\"hw\">word</span>
+<span class=\"hidden\">HIDDEN</span><span class=\"sense\">1 first sense</span>
+<span class=\"sense\">2 second sense</span><span class=\"box\"><span>in box</span>
+<i><span>nested, inline</span></i></span></span></body></html>"
+  "A dictionary entry whose style sheet lays it out.")
+
+(ert-deftest launcher-osx-dictionary-css-rules ()
+  (let* ((css (with-temp-buffer
+                (insert launcher-osx-dictionary-test--html)
+                (dom-texts (car (dom-by-tag (libxml-parse-html-region (point-min) (point-max))
+                                            'style)))))
+         (rules (launcher-osx-dictionary--css-rules css)))
+    ;; The commented rule, the selector with a pseudo-class and the
+    ;; @media block are ignored; `>' marks the compound to its left as
+    ;; the parent.
+    (should (equal '(((nil "sense") (nil nil "entry")) 20 block)
+                   (nth 0 rules)))
+    (should (equal '(((span) (t nil "box")) 11 block) (nth 1 rules)))
+    (should (equal '(((nil "hidden") (nil nil "entry")) 20 none) (nth 2 rules)))
+    (should (= 3 (length rules)))))
+
+(ert-deftest launcher-osx-dictionary-render-html-follows-style-sheet ()
+  (let ((text (launcher-osx-dictionary--render-html launcher-osx-dictionary-test--html)))
+    (should-not (string-search "HIDDEN" text))
+    ;; Block-level parts start lines; inline ones, a grandchild of the box
+    ;; included, stay in the line.
+    (should (string-match-p "^1 first sense$" text))
+    (should (string-match-p "^2 second sense$" text))
+    (should (string-match-p "^in box$" text))
+    (should (string-match-p "^nested, inline$" text))
+    (should (string-prefix-p "word" text))))
+
+(ert-deftest launcher-osx-dictionary-html-search-labels-dictionaries ()
+  (let* ((dir (make-temp-file "launcher-dictionary-html" t))
+         (helper (expand-file-name "helper" dir))
+         (log (expand-file-name "log" dir))
+         (launcher-osx-dictionary-format 'html)
+         (osx-dictionary-current-dictionary nil)
+         (osx-dictionary-allowed-dictionaries '(("Dict One" . "One") "Dict Two"))
+         (osx-dictionary-separator "----\n"))
+    (unwind-protect
+        (progn
+          (with-temp-file helper
+            (insert "#!/bin/sh\necho \"$@\" > " (shell-quote-argument log) "\n"
+                    "printf '\\035Dict One\\n<p>first</p>\\n"
+                    "\\035Dict One\\n<p>second</p>\\n"
+                    "\\035Dict Two\\n<p>third</p>\\n'\n"))
+          (set-file-modes helper #o755)
+          (cl-letf (((symbol-function 'launcher-osx-dictionary--html-helper)
+                     (lambda () helper)))
+            (let ((text (launcher-osx-dictionary--search "a word")))
+              (should (equal "-d Dict One -d Dict Two a word\n"
+                             (with-temp-buffer (insert-file-contents log) (buffer-string))))
+              (should (equal (if (fboundp 'osx-dictionary--display-name-for)
+                                 "One\nfirst\n----\nsecond\n\nDict Two\nthird\n"
+                               "Dict One\nfirst\n----\nsecond\n\nDict Two\nthird\n")
+                             (substring-no-properties text))))))
+      (delete-directory dir t))))
 
 ;;; launcher-osx-dictionary-tests.el ends here
