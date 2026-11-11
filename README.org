@@ -541,6 +541,12 @@ This fork (~yibie/launcher.el~, branch ~main~) adds to upstream:
 - Function results :: A tool's ~:submit~ may return a function; ~launcher~
   calls it after the minibuffer closes, so the action can prompt or change
   windows.  A buffer it returns is shown.
+- ~launcher-display-buffer-function~ :: Shows a buffer a result returned.
+  The default, ~launcher-display-buffer~, uses ~pop-to-buffer~ in an
+  ordinary frame (~launcher-editing-frame~), so a dictionary definition
+  chosen in a minibuffer-only popup lands in the main frame.  A popup setup
+  can bind it to show the buffer in a frame of its own; see
+  [[file:examples/launcher-popup.el][examples/launcher-popup.el]].
 - ~launcher-after-copy-hook~ :: Runs after the calculator, a snippet or another copying tool put its
   result on the kill ring, for instance to give the focus back to the
   application the result will be pasted in.

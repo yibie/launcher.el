@@ -932,6 +932,19 @@
             (should (eq shown buffer)))
         (kill-buffer buffer)))))
 
+(ert-deftest launcher-tools-buffer-result-uses-display-function ()
+  (let ((buffer (get-buffer-create " *launcher-test-target*")) shown)
+    (unwind-protect
+        (let ((launcher-display-buffer-function (lambda (b) (setq shown b))))
+          (cl-letf (((symbol-function 'launcher--tools) #'ignore)
+                    ((symbol-function 'launcher--entries) #'ignore)
+                    ((symbol-function 'pop-to-buffer) (lambda (&rest _) (error "Not used")))
+                    ((symbol-function 'launcher--read)
+                     (lambda (&rest _) (cons buffer "x"))))
+            (launcher)
+            (should (eq shown buffer))))
+      (kill-buffer buffer))))
+
 (ert-deftest launcher-tools-calculator-runs-copy-hook ()
   (let* ((kill-ring nil) (copied nil)
          (launcher-after-copy-hook (list (lambda () (setq copied (car kill-ring))))))

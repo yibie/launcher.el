@@ -12,7 +12,9 @@
 ;; focus back to the application that was in front; so does an action
 ;; that only copied something (the calculator, a snippet, an emoji, a
 ;; clipboard entry), so you can paste it right away.  Other actions keep
-;; the focus where they sent it: an application, a browser, a buffer.
+;; the focus where they sent it: an application, a browser.  A result
+;; buffer (a dictionary definition) opens in a second popup frame; q
+;; closes it and gives the focus back.
 ;;
 ;; The idea comes from https://emacs-china.org/t/emacs-alfred/32124.
 ;; See raycast/summon-emacs-launcher.sh for the script command.
@@ -50,6 +52,44 @@ Set by `launcher-after-copy-hook' while the popup runs.")
   "Note that the action only copied its result."
   (setq my/popup-return-focus t))
 
+;; A result buffer cannot be shown in the minibuffer-only frame, so it
+;; gets a popup frame of its own, which inherits the application to give
+;; the focus back to.
+(defun my/popup--display-buffer (buffer)
+  "Show BUFFER alone in the result popup frame; reuse one that is open."
+  (let* ((origin (frame-parameter nil 'my-popup-origin))
+         (frame (or (cl-find-if (lambda (f) (frame-parameter f 'my-popup-result))
+                                (frame-list))
+                    (make-frame '((window-system . ns) (name . "launcher result")
+                                  (my-popup-result . t)
+                                  (width . 80) (height . 24))))))
+    (set-frame-parameter frame 'my-popup-origin origin)
+    (select-frame-set-input-focus frame)
+    (let ((window (frame-first-window frame)))
+      (delete-other-windows window)
+      (set-window-buffer window buffer)
+      (select-window window))
+    (with-current-buffer buffer
+      (my/popup-result-mode 1))))
+
+(defvar-keymap my/popup-result-mode-map
+  "q" #'my/popup-result-quit)
+
+(define-minor-mode my/popup-result-mode
+  "Make q close the popup frame a result buffer is shown in."
+  :keymap my/popup-result-mode-map)
+
+(defun my/popup-result-quit ()
+  "Delete the selected frame when it is the result popup.
+Elsewhere run what q is bound to without this mode."
+  (interactive)
+  (if (frame-parameter nil 'my-popup-result)
+      (delete-frame)
+    (let* ((my/popup-result-mode nil)
+           (command (key-binding (this-command-keys-vector))))
+      (when (commandp command)
+        (call-interactively command)))))
+
 (defun my/launcher-popup ()
   "Run `launcher' in a temporary minibuffer-only popup frame."
   (interactive)
@@ -64,7 +104,8 @@ Set by `launcher-after-copy-hook' while the popup runs.")
                                                   vertico-count 10))))))
          (my/popup-return-focus nil)
          (launcher-after-copy-hook (cons #'my/popup--copied
-                                         launcher-after-copy-hook)))
+                                         launcher-after-copy-hook))
+         (launcher-display-buffer-function #'my/popup--display-buffer))
     (pcase-let ((`(,x ,y ,width ,height) (frame-monitor-workarea frame)))
       (set-frame-position frame
                           (+ x (/ (- width (frame-outer-width frame)) 2))

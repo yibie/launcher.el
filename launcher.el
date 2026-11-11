@@ -354,12 +354,26 @@ frame does.  For actions that show a buffer after launcher closes."
     frame))
 
 ;;;###autoload
+(defun launcher-display-buffer (buffer)
+  "Show BUFFER with `pop-to-buffer' in a frame with ordinary windows.
+The frame is chosen by `launcher-editing-frame'."
+  (launcher-editing-frame)
+  (pop-to-buffer buffer))
+
+(defcustom launcher-display-buffer-function #'launcher-display-buffer
+  "Function of one argument that shows a buffer a result returned.
+`launcher' calls it after the minibuffer closes.  A popup setup can
+show the buffer in a frame of its own instead."
+  :type 'function
+  :group 'launcher)
+
+;;;###autoload
 (defun launcher (&optional refresh initial)
   "Query apps, calculator, custom tools and web searches as you type.
 Empty input shows no candidates.  Return executes the selected result.
 A tool prefix stays in the input box.  Results that return a buffer
-are shown with `pop-to-buffer' after the minibuffer closes, in a frame
-chosen by `launcher-editing-frame'; results that
+are shown by `launcher-display-buffer-function' after the minibuffer
+closes; results that
 return a function have it called then.
 With prefix argument REFRESH, rebuild the application index first.
 INITIAL, when supplied from Lisp, is the full starting input."
@@ -370,9 +384,7 @@ INITIAL, when supplied from Lisp, is the full starting input."
          (value (car answer)))
     (when (functionp value) (setq value (funcall value)))
     (when (and (bufferp value) (buffer-live-p value))
-      ;; Launcher may run in a minibuffer-only popup frame.
-      (launcher-editing-frame)
-      (pop-to-buffer value))))
+      (funcall launcher-display-buffer-function value))))
 
 (provide 'launcher)
 ;;; launcher.el ends here
