@@ -19,6 +19,8 @@
 (require 'cl-lib)
 (require 'subr-x)
 
+(declare-function launcher-editing-frame "launcher")
+
 (defcustom launcher-files-directories '("~/Documents" "~/Downloads")
   "Directories whose files `launcher-files-tool' searches.
 Run `launcher-files-refresh' after changing this option."
@@ -71,25 +73,12 @@ nil uses `launcher-files-open-function'."
   (unless (zerop (call-process "open" nil nil nil path))
     (user-error "Cannot open %s" path)))
 
-(defun launcher-files--editing-frame ()
-  "Return a visible frame with ordinary windows, preferring the selected one.
-A minibuffer-only frame, such as a launcher popup, does not qualify; a new
-frame is made when no other frame does."
-  (let ((usable (lambda (frame)
-                  (and (frame-visible-p frame)
-                       (not (eq (frame-parameter frame 'minibuffer) 'only))))))
-    (or (and (funcall usable (selected-frame)) (selected-frame))
-        (seq-find usable (frame-list))
-        (make-frame))))
-
 (defun launcher-files-open-in-emacs (path)
   "Visit PATH in Emacs: a file in its buffer, a directory in Dired.
 When launcher runs in a minibuffer-only frame, PATH opens in another
 frame, which takes the input focus."
-  (let ((frame (launcher-files--editing-frame)))
-    (unless (eq frame (selected-frame))
-      (select-frame-set-input-focus frame))
-    (find-file path)))
+  (launcher-editing-frame)
+  (find-file path))
 
 ;;; File list
 

@@ -436,7 +436,18 @@ This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
   ~(launcher-system-define "Flush DNS" :shell "dscacheutil -flushcache")~.
 - ~launcher-clipboard.el~ :: ~(launcher-clipboard-tool "c")~ lists the kill
   ring, newest first, with text copied in other applications folded in.
-  RET copies the entry again and runs ~launcher-after-copy-hook~.
+  RET copies the entry again and runs ~launcher-after-copy-hook~.  With
+  Embark, entries are targets of category ~launcher-clipboard~ and
+  ~launcher-clipboard-embark-map~ offers ~e~ (edit the entry in a buffer;
+  ~C-c C-c~ copies the result in its place, ~C-c C-k~ cancels), ~d~ (delete
+  it from the kill ring) and ~j~ (join entries with
+  ~launcher-clipboard-join-separator~ and copy them as one text).  Select
+  entries with ~SPC~ in ~embark-act~, then ~embark-act-all~ and ~j~ joins
+  them in the order they were selected.
+- ~launcher-embark.el~ :: Gives launcher results Embark categories of their
+  own.  ~(launcher-embark-register SUBMIT CATEGORY)~ makes the results of the
+  tool whose ~:submit~ is SUBMIT targets of CATEGORY whose value is the
+  result's ~:data~.
 - ~launcher-characters.el~ :: ~(launcher-characters-tool "e")~ finds emoji
   by the names macOS ships (CoreEmoji's ~AppleName.strings~, in each of
   ~launcher-characters-emoji-languages~, English and Simplified Chinese by

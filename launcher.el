@@ -338,6 +338,21 @@ any other INPUT, which is ordinary app or web input."
 
 (require 'launcher-query)
 
+(defun launcher-editing-frame ()
+  "Select a frame with ordinary windows, give it the focus and return it.
+Prefer the selected frame.  A minibuffer-only frame, such as one launcher
+runs in as a popup, does not qualify; a new frame is made when no other
+frame does.  For actions that show a buffer after launcher closes."
+  (let* ((usable (lambda (frame)
+                   (and (frame-visible-p frame)
+                        (not (eq (frame-parameter frame 'minibuffer) 'only)))))
+         (frame (or (and (funcall usable (selected-frame)) (selected-frame))
+                    (seq-find usable (frame-list))
+                    (make-frame))))
+    (unless (eq frame (selected-frame))
+      (select-frame-set-input-focus frame))
+    frame))
+
 ;;;###autoload
 (defun launcher (&optional refresh initial)
   "Query apps, calculator, custom tools and web searches as you type.
