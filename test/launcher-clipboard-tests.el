@@ -43,8 +43,8 @@
         (results (launcher-characters--query "grinning face")))
     (should (launcher--tools))
     (should (equal "😀" (plist-get (car results) :data)))
-    (should (equal "U+1F600" (plist-get (car results) :subtitle)))
-    (should (string-suffix-p "Grinning Face" (plist-get (car results) :title)))
+    (should (string-suffix-p "U+1F600" (plist-get (car results) :subtitle)))
+    (should (string-suffix-p "grinning face" (plist-get (car results) :title) t))
     (should (eq 'launcher-characters-emoji
                 (get-text-property 0 'face (plist-get (car results) :title))))
     (should-not (launcher-characters--query "   "))
@@ -55,10 +55,29 @@
   (let* ((results (launcher-characters--query "red heart"))
          (data (mapcar (lambda (c) (plist-get c :data)) results)))
     (should (equal "❤️" (car data)))
-    (should (equal "U+2764 U+FE0F" (plist-get (car results) :subtitle)))
+    (should (string-suffix-p "U+2764 U+FE0F" (plist-get (car results) :subtitle)))
     ;; The bare symbol is not offered a second time.
     (should-not (member "❤" (mapcar (lambda (c) (plist-get c :data))
                                     (launcher-characters--query "heavy black heart"))))))
+
+(ert-deftest launcher-characters-emoji-match-other-languages ()
+  (skip-unless (and (launcher-characters--emoji)
+                    (member "zh_CN" launcher-characters-emoji-languages)))
+  (let ((results (launcher-characters--query "红色的心")))
+    (should (equal "❤️" (plist-get (car results) :data)))
+    (should (string-prefix-p "红色的心" (plist-get (car results) :subtitle))))
+  ;; One non-ASCII character is a query; one ASCII letter is not.
+  (should (launcher-characters--query "心"))
+  (should-not (launcher-characters--query "h"))
+  ;; Families and flags come with the system data.
+  (should (member "🇯🇵" (mapcar (lambda (c) (plist-get c :data))
+                                (launcher-characters--query "flag japan")))))
+
+(ert-deftest launcher-characters-without-emoji-data-uses-ucs-names ()
+  (let ((launcher-characters--emoji nil)
+        (launcher-characters-emoji-directory "/nonexistent"))
+    (should-not (launcher-characters--emoji))
+    (should (equal "😀" (plist-get (car (launcher-characters--query "grinning face")) :data)))))
 
 (ert-deftest launcher-characters-symbols-and-limit ()
   (let ((arrow (seq-find (lambda (c) (equal "→" (plist-get c :data)))

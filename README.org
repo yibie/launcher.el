@@ -438,11 +438,14 @@ This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
   ring, newest first, with text copied in other applications folded in.
   RET copies the entry again and runs ~launcher-after-copy-hook~.
 - ~launcher-characters.el~ :: ~(launcher-characters-tool "e")~ finds emoji
-  (from Emacs's emoji.el, fully qualified, e.g. ❤️) and other Unicode
-  characters (~ucs-names~) by name: every query word must occur in the name;
-  the exact name comes first, then emoji, then shorter names.  Emoji are
-  drawn with the face ~launcher-characters-emoji~ (a color emoji font), so
-  they keep their color where the default font has a plain glyph.  RET
+  by the names macOS ships (CoreEmoji's ~AppleName.strings~, in each of
+  ~launcher-characters-emoji-languages~, English and Simplified Chinese by
+  default, so ~e heart~ and ~e 红色~ both work; fully qualified, with
+  families and flags) and other Unicode characters by ~ucs-names~.  Every
+  query word must occur in a name; the exact name comes first, then emoji,
+  then shorter names.  Emoji are drawn with the face
+  ~launcher-characters-emoji~ (a color emoji font at 0.8 height, so lines
+  stay as tall as text lines and a list sized in lines still fits).  RET
   copies the character and runs ~launcher-after-copy-hook~.
 - ~launcher-web.el~ :: ~(launcher-sites-tool nil)~ offers the links of
   ~launcher-sites-file~ (Org) beside applications;
