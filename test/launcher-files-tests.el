@@ -80,6 +80,27 @@
         (should (equal "/opt/b" opened))
         (should (equal '("zoxide" nil 0 nil "add" "--" "/opt/b") (car calls)))))))
 
+(ert-deftest launcher-zoxide-uses-its-own-open-function ()
+  (let* (files dirs
+         (launcher-files-open-function (lambda (path) (setq files path)))
+         (launcher-zoxide-open-function (lambda (path) (setq dirs path))))
+    (cl-letf (((symbol-function 'call-process) (lambda (&rest _) 0)))
+      (funcall (launcher-zoxide--submit (list :data "/opt/b"))))
+    (should (equal "/opt/b" dirs))
+    (should-not files)))
+
+(ert-deftest launcher-files-open-in-emacs-visits-directory ()
+  (let* ((dir (file-name-as-directory (make-temp-file "launcher-open" t)))
+         (buffer nil))
+    (unwind-protect
+        (save-window-excursion
+          (launcher-files-open-in-emacs dir)
+          (setq buffer (current-buffer))
+          (should (derived-mode-p 'dired-mode))
+          (should (equal dir (file-name-as-directory default-directory))))
+      (when (buffer-live-p buffer) (kill-buffer buffer))
+      (delete-directory dir t))))
+
 (ert-deftest launcher-files-tools-validate ()
   (should (launcher--tool-from-entry (launcher-files-tool "f")))
   (should (launcher--tool-from-entry (launcher-zoxide-tool "z" :name "Dirs"))))

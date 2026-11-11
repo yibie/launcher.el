@@ -421,8 +421,11 @@ This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
   ~launcher-files-cache-file~ in the background (every
   ~launcher-files-refresh-interval~ seconds) and ~fzf --filter~ ranks it per
   query.  ~(launcher-zoxide-tool "z")~ lists the directories zoxide knows,
-  most used first.  Both open with ~launcher-files-open-function~ (macOS
-  ~open~ by default).  Needs ~rg~, ~fzf~ and, for directories, ~zoxide~.
+  most used first.  Files open with ~launcher-files-open-function~ (macOS
+  ~open~ by default), directories with ~launcher-zoxide-open-function~ (the
+  same unless set).  ~launcher-files-open-in-emacs~ visits the path in Emacs
+  instead, Dired for a directory, moving to an ordinary frame when launcher
+  runs in a minibuffer-only one.  Needs ~rg~, ~fzf~ and, for directories, ~zoxide~.
 - ~launcher-system.el~ :: ~(launcher-system-tool ">")~ lists macOS system
   commands from ~launcher-system-commands~: dark mode, display sleep, hidden
   files, lock, sleep, restart, shut down, log out, caffeinate, empty Trash,

@@ -11,7 +11,8 @@
 ;; `launcher-zoxide-tool' offers the directories zoxide has learned, most
 ;; frequently and recently used first.
 ;;
-;; Both open their selection with `launcher-files-open-function'.
+;; Files open with `launcher-files-open-function', directories with
+;; `launcher-zoxide-open-function' (by default the same function).
 
 ;;; Code:
 
@@ -52,7 +53,16 @@ The rebuild runs in the background; the search uses the old list meanwhile."
 (defcustom launcher-files-open-function #'launcher-files-open-externally
   "Function called with the absolute path of a selected file or directory."
   :type '(choice (function-item launcher-files-open-externally)
-                 (function-item find-file)
+                 (function-item launcher-files-open-in-emacs)
+                 function)
+  :group 'launcher)
+
+(defcustom launcher-zoxide-open-function nil
+  "Function called with the directory selected in `launcher-zoxide-tool'.
+nil uses `launcher-files-open-function'."
+  :type '(choice (const :tag "Same as files" nil)
+                 (function-item launcher-files-open-externally)
+                 (function-item launcher-files-open-in-emacs)
                  function)
   :group 'launcher)
 
@@ -60,6 +70,26 @@ The rebuild runs in the background; the search uses the old list meanwhile."
   "Open PATH with macOS `open': its default application, or Finder."
   (unless (zerop (call-process "open" nil nil nil path))
     (user-error "Cannot open %s" path)))
+
+(defun launcher-files--editing-frame ()
+  "Return a visible frame with ordinary windows, preferring the selected one.
+A minibuffer-only frame, such as a launcher popup, does not qualify; a new
+frame is made when no other frame does."
+  (let ((usable (lambda (frame)
+                  (and (frame-visible-p frame)
+                       (not (eq (frame-parameter frame 'minibuffer) 'only))))))
+    (or (and (funcall usable (selected-frame)) (selected-frame))
+        (seq-find usable (frame-list))
+        (make-frame))))
+
+(defun launcher-files-open-in-emacs (path)
+  "Visit PATH in Emacs: a file in its buffer, a directory in Dired.
+When launcher runs in a minibuffer-only frame, PATH opens in another
+frame, which takes the input focus."
+  (let ((frame (launcher-files--editing-frame)))
+    (unless (eq frame (selected-frame))
+      (select-frame-set-input-focus frame))
+    (find-file path)))
 
 ;;; File list
 
@@ -160,14 +190,14 @@ of files under `launcher-files-directories'.  RET opens the file with
   (let ((dir (plist-get candidate :data)))
     (lambda ()
       (call-process "zoxide" nil 0 nil "add" "--" dir)
-      (funcall launcher-files-open-function dir)
+      (funcall (or launcher-zoxide-open-function launcher-files-open-function) dir)
       nil)))
 
 ;;;###autoload
 (cl-defun launcher-zoxide-tool (prefix &key (name "Directories") icon)
   "Return a `launcher-tools' entry for zoxide's directories under PREFIX.
 `PREFIX ' alone lists them, most used first; further input narrows the
-list.  RET opens the directory with `launcher-files-open-function' and
+list.  RET opens the directory with `launcher-zoxide-open-function' and
 counts the visit in zoxide.  NAME and ICON are as in `launcher-tools'."
   (list prefix :name name :icon icon
         :submit #'launcher-zoxide--submit
