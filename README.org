@@ -408,7 +408,7 @@ This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
 - Function results :: A tool's ~:submit~ may return a function; ~launcher~
   calls it after the minibuffer closes, so the action can prompt or change
   windows.  A buffer it returns is shown.
-- ~launcher-after-copy-hook~ :: Runs after the calculator or a snippet put its
+- ~launcher-after-copy-hook~ :: Runs after the calculator, a snippet or another copying tool put its
   result on the kill ring, for instance to give the focus back to the
   application the result will be pasted in.
 - ~launcher-snippets.el~ :: ~(launcher-snippets-tool "t")~ lists the headings
@@ -431,6 +431,13 @@ This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
   Trash ask first.  A failing command shows its output in
   ~launcher-system-error-buffer~.  ~launcher-system-define~ adds your own:
   ~(launcher-system-define "Flush DNS" :shell "dscacheutil -flushcache")~.
+- ~launcher-clipboard.el~ :: ~(launcher-clipboard-tool "c")~ lists the kill
+  ring, newest first, with text copied in other applications folded in.
+  RET copies the entry again and runs ~launcher-after-copy-hook~.
+- ~launcher-characters.el~ :: ~(launcher-characters-tool "e")~ finds Unicode
+  characters by name (~ucs-names~): every query word must occur in the name;
+  the exact name comes first, then emoji, then shorter names.  RET copies
+  the character and runs ~launcher-after-copy-hook~.
 - ~launcher-web.el~ :: ~(launcher-sites-tool nil)~ offers the links of
   ~launcher-sites-file~ (Org) beside applications;
   ~(launcher-web-search-tool "w")~ lists one search per engine in
@@ -457,6 +464,7 @@ emacs --batch -Q -L . -L test -l test/launcher-tests.el \
   -l test/launcher-icons-tests.el -l test/launcher-icons-worker-tests.el \
   -l test/launcher-snippets-tests.el -l test/launcher-web-tests.el \
   -l test/launcher-files-tests.el -l test/launcher-system-tests.el \
+  -l test/launcher-clipboard-tests.el \
   -f ert-run-tests-batch-and-exit
 #+end_src
 
