@@ -1,61 +1,31 @@
-#+title: 常用网址
+#+title: Sites
 
 # Sites for `launcher-sites-tool' (set `launcher-sites-file' to this file).
 # Every http(s) link is one site: [[URL][Name]] uses the name, a bare URL its domain.
 # Headings only group sites and show in the result's subtitle.
 # Type a few letters of a name with no prefix, or "s " to list them all.
-* 常用
-- [[https://dash.cloudflare.com/][CloudFlare 控制台]]
+
+* Daily
 - [[https://mail.google.com][Gmail]]
-- [[https://github.com][GitHub]]
+- [[https://calendar.google.com][Google Calendar]]
+- [[https://drive.google.com][Google Drive]]
 - [[https://docs.google.com][Google Docs]]
-* SEO
-
-- [[https://seo.web.cafe/][哥飞的SEO工具箱]]
-- [[https://new.web.cafe/chat][哥飞.ai 问答]]
-- [[https://seo.web.cafe/chat/][哥飞 SEO Agent]]
-- [[https://aitdk.com/][AITDK]]
-- [[https://seo.box/][SEO.BOX]]
-- [[https://search.google.com/search-console][GSC]]
-** 关键词研究
-- [[https://seo.web.cafe/translate/][需求翻译器]]
-- [[https://seo.web.cafe/trends/][谷歌趋势查询]]
-- [[https://seo.web.cafe/ideas/][关键词拓展]]
-- [[https://seo.web.cafe/mine/][需求挖掘机]]
-- [[https://seo.web.cafe/kd/][关键词难度估算]]
-- [[https://seo.web.cafe/kgr/][关键词价值评估]]
-- [[https://seo.web.cafe/serp/][SERP 排名解密]]
-
-** 域名与网站尽调
-- [[https://seo.web.cafe/domain/][网站起名AI]]
-- [[https://seo.web.cafe/bulk/][域名批量查询]]
-- [[https://seo.web.cafe/sitekw/][站点出词]]
-- [[https://seo.web.cafe/history/][域名前世档案]]
-- [[https://seo.web.cafe/worth/][网站价值估算器]]
-- [[https://seo.web.cafe/backlink/][外链价值计算器]]
-- [[https://seo.web.cafe/dr/][DR批量查询]]
-- [[https://seo.web.cafe/spam/][外链 Spam 查询]]
-
-** 页面优化
-- [[https://seo.web.cafe/audit/][On Page SEO 体检]]
-- [[https://seo.web.cafe/review/][页面军师]]
-- [[https://seo.web.cafe/string/][文本长度计算器]]
-
-** 增长与变现
-- [[https://seo.web.cafe/adsense/][AdSense 过审预检]]
-- [[https://seo.web.cafe/money/][收入目标拆解计算器]]
-- [[https://seo.web.cafe/cashflow/][投流资金周转计算器]]
-- [[https://seo.web.cafe/influencer/][YouTube 红人报价评估]]
-- [[https://seo.web.cafe/referring/][Stripe 引荐流量榜]]
-- [[https://seo.web.cafe/traffic/][网站流量数据分析器]]
-- [[https://seo.web.cafe/email/][邮箱提取器]]
-
-* 社区
-- [[https://emacs-china.org][Emacs China]]
-- [[https://news.ycombinator.com][Hacker News]]
-- [[https://lobste.rs][Lobsters]]
-- [[https://x.com][X]]
-
-* 媒体
 - [[https://www.youtube.com][YouTube]]
-- [[https://www.techmeme.com/][techmeme]]
+
+* Development
+- [[https://github.com][GitHub]]
+- [[https://github.com/notifications][GitHub Notifications]]
+- [[https://stackoverflow.com][Stack Overflow]]
+- [[https://developer.mozilla.org][MDN Web Docs]]
+- [[https://dash.cloudflare.com][Cloudflare Dashboard]]
+
+* Emacs
+- [[https://www.gnu.org/software/emacs/manual/html_node/emacs/][Emacs Manual]]
+- [[https://www.gnu.org/software/emacs/manual/html_node/elisp/][Emacs Lisp Reference]]
+- [[https://melpa.org][MELPA]]
+- [[https://www.reddit.com/r/emacs/][r/emacs]]
+
+* Reading
+- [[https://news.ycombinator.com][Hacker News]]
+- [[https://en.wikipedia.org][Wikipedia]]
+- [[https://arxiv.org][arXiv]]
