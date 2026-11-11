@@ -1,0 +1,39 @@
+#+TITLE: Development
+
+Run the regression tests without Vertico, launching apps or opening a browser:
+
+#+begin_src sh
+sh test/elpa.sh   # pinned packages, into .cache/elpa
+emacs --batch -Q -L . -L test -l test/launcher-tests.el \
+  -l test/launcher-tools-tests.el -l test/launcher-candidates-tests.el \
+  -l test/launcher-osx-dictionary-tests.el \
+  -l test/launcher-icons-tests.el -l test/launcher-icons-worker-tests.el \
+  -l test/launcher-snippets-tests.el -l test/launcher-web-tests.el \
+  -l test/launcher-files-tests.el -l test/launcher-system-tests.el \
+  -l test/launcher-clipboard-tests.el \
+  -f ert-run-tests-batch-and-exit
+#+end_src
+
+The icon cache checks (~test/launcher-icons-tests.el~) replace the worker
+with a fake process, so they need neither macOS nor a display.
+~test/launcher-icons-worker-tests.el~ runs the real worker on system apps
+and on fake bundles in temporary directories, on macOS only, and skips
+elsewhere.
+
+The dictionary checks use the pinned osx-dictionary that ~test/elpa.sh~
+fetches, and skip without it.  A fake helper script stands in for its
+native one, so they need neither macOS nor dictionaries, and prove no real
+lookup.
+
+Vertico's display needs a graphical Emacs.  ~bash test/vm.sh~ runs the
+graphical checks (~test/gui.sh~, which loads ~test/launcher-gui-tests.el~,
+~test/launcher-tools-gui-tests.el~ and ~test/launcher-icons-gui-tests.el~) in a disposable Emacs in the macOS test VM
+that Portal's ~test/vm.sh~ uses, without Portal, typing through AppKit's
+event queue.  It fetches pinned Vertico, Orderless and Marginalia releases
+with ~test/elpa.sh~ into ~.cache/elpa~, and copies logs and screenshots back
+to ~.cache/vm/~.  Never run these checks in your own Emacs session.
+
+Real lookups in Apple's dictionaries are opt-in, also in the VM:
+~bash test/vm.sh sh test/gui.sh '^launcher-dictionary-real-'~ builds the
+pinned osx-dictionary's helper in a temporary copy, looks words up through
+~launcher~, and logs the environment and definitions.

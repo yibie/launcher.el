@@ -1,0 +1,86 @@
+#+TITLE: Additions in this fork
+
+This fork (~yibie/launcher.el~, branch ~main~) adds to upstream:
+
+- ~launcher-sort-function~ :: Orders results for any completion UI.  Set it
+  to ~launcher-sort-by-history~ to put recent selections first and keep the
+  order tools produced the rest in.  Default nil leaves sorting to the UI.
+- Function results :: A tool's ~:submit~ may return a function; ~launcher~
+  calls it after the minibuffer closes, so the action can prompt or change
+  windows.  A buffer it returns is shown.
+- Dictionary layout :: ~launcher-osx-dictionary.el~ renders each entry's
+  HTML with ~shr~, following the dictionary's own style sheet, so senses,
+  examples and notes start lines of their own instead of running
+  together.  It searches each enabled dictionary separately: macOS's
+  merged search returns one record per word, for some words only a
+  cross-reference.  ~launcher-osx-dictionary-format~ ~text~ restores
+  osx-dictionary's plain text.
+- ~launcher-display-buffer-function~ :: Shows a buffer a result returned.
+  The default, ~launcher-display-buffer~, uses ~pop-to-buffer~ in an
+  ordinary frame (~launcher-editing-frame~), so a dictionary definition
+  chosen in a minibuffer-only popup lands in the main frame.  A popup setup
+  can bind it to show the buffer in a frame of its own; see
+  [[file:../examples/launcher-popup.el][examples/launcher-popup.el]].
+- ~launcher-after-copy-hook~ :: Runs after the calculator, a snippet or another copying tool put its
+  result on the kill ring, for instance to give the focus back to the
+  application the result will be pasted in.
+- ~launcher-snippets.el~ :: ~(launcher-snippets-tool "t")~ lists the headings
+  of ~launcher-snippets-file~ (Org) and copies a body after filling
+  placeholders such as ~{clipboard}~, ~{date offset="+1d"}~, ~{input:Name}~,
+  ~{choice:Tone|Formal,Casual}~ and ~{snippet:Signature}~; see
+  ~launcher-snippets-expand~.
+- ~launcher-files.el~ :: ~(launcher-files-tool "f")~ searches the files under
+  ~launcher-files-directories~ without Spotlight: ripgrep writes their list to
+  ~launcher-files-cache-file~ in the background (every
+  ~launcher-files-refresh-interval~ seconds) and ~fzf --filter~ ranks it per
+  query.  ~(launcher-zoxide-tool "z")~ lists the directories zoxide knows,
+  most used first.  Files open with ~launcher-files-open-function~ (macOS
+  ~open~ by default), directories with ~launcher-zoxide-open-function~ (the
+  same unless set).  ~launcher-files-open-in-emacs~ visits the path in Emacs
+  instead, Dired for a directory, moving to an ordinary frame when launcher
+  runs in a minibuffer-only one.  Needs ~rg~, ~fzf~ and, for directories, ~zoxide~.
+- ~launcher-system.el~ :: ~(launcher-system-tool ">")~ lists macOS system
+  commands from ~launcher-system-commands~: dark mode, display sleep, hidden
+  files, lock, sleep, restart, shut down, log out, caffeinate, empty Trash,
+  version and hardware information, external IP and System Settings panels.
+  Commands run after launcher closes; restart, shut down, log out and empty
+  Trash ask first.  A failing command shows its output in
+  ~launcher-system-error-buffer~.  ~launcher-system-define~ adds your own:
+  ~(launcher-system-define "Flush DNS" :shell "dscacheutil -flushcache")~.
+- ~launcher-clipboard.el~ :: ~(launcher-clipboard-tool "c")~ lists the kill
+  ring, newest first, with text copied in other applications folded in.
+  RET copies the entry again and runs ~launcher-after-copy-hook~.  With
+  Embark, entries are targets of category ~launcher-clipboard~ and
+  ~launcher-clipboard-embark-map~ offers ~e~ (edit the entry in a buffer;
+  ~C-c C-c~ copies the result in its place, ~C-c C-k~ cancels), ~d~ (delete
+  it from the kill ring) and ~j~ (join entries with
+  ~launcher-clipboard-join-separator~ and copy them as one text).  Select
+  entries with ~SPC~ in ~embark-act~, then ~embark-act-all~ and ~j~ joins
+  them in the order they were selected.
+- ~launcher-embark.el~ :: Gives launcher results Embark categories of their
+  own.  ~(launcher-embark-register SUBMIT CATEGORY)~ makes the results of the
+  tool whose ~:submit~ is SUBMIT targets of CATEGORY whose value is the
+  result's ~:data~.
+- ~launcher-characters.el~ :: ~(launcher-characters-tool "e")~ finds emoji
+  by the names macOS ships (CoreEmoji's ~AppleName.strings~, in each of
+  ~launcher-characters-emoji-languages~, English and Simplified Chinese by
+  default, so ~e heart~ and ~e 红色~ both work; fully qualified, with
+  families and flags) and other Unicode characters by ~ucs-names~.  Every
+  query word must occur in a name; the exact name comes first, then emoji,
+  then shorter names.  Emoji are drawn with the face
+  ~launcher-characters-emoji~ (a color emoji font at 0.8 height, so lines
+  stay as tall as text lines and a list sized in lines still fits).  RET
+  copies the character and runs ~launcher-after-copy-hook~.
+- ~launcher-web.el~ :: ~(launcher-sites-tool nil)~ offers the links of
+  ~launcher-sites-file~ (Org) beside applications;
+  ~(launcher-web-search-tool "w")~ lists one search per engine in
+  ~launcher-web-search-engines~.
+
+#+begin_src emacs-lisp
+(require 'launcher-snippets)
+(require 'launcher-web)
+(setq launcher-sort-function #'launcher-sort-by-history
+      launcher-tools (list (launcher-sites-tool nil)
+                           (launcher-web-search-tool "w")
+                           (launcher-snippets-tool "t")))
+#+end_src
