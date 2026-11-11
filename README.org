@@ -8,7 +8,7 @@ This is yibie's fork of [[https://github.com/xiaoxinghu/launcher.el][xiaoxinghu/
 ~develop~ branch.  The core is upstream's; the tools below are the ones I
 use every day, summoned in a small popup frame from any application.
 
-# [[./assets/overview.png]]
+[[./assets/overview.png]]
 
 * What it does
 
@@ -33,7 +33,9 @@ popup can hand the focus back to the application you are about to paste in.
 
 ** Files and directories
 
-# [[./assets/files.png]]
+[[./assets/files.png]]
+
+[[./assets/zoxide.png]]
 
 ~f~ searches ~launcher-files-directories~ without Spotlight: ripgrep lists
 the files once, in the background, and ~fzf --filter~ ranks that list on
@@ -42,7 +44,7 @@ directories zoxide knows, most used first.
 
 ** System commands
 
-# [[./assets/system.png]]
+[[./assets/system.png]]
 
 ~>~ offers 30 macOS commands written for this fork: dark mode, display
 sleep, lock, sleep, restart, shut down, log out, caffeinate, empty Trash,
@@ -51,7 +53,7 @@ commands ask first.  ~launcher-system-define~ adds your own.
 
 ** Clipboard history
 
-# [[./assets/clipboard.png]]
+[[./assets/clipboard.png]]
 
 ~c~ lists the kill ring, with what other applications copied folded in.
 With Embark, ~C-. e~ edits an entry, ~C-. d~ deletes it, and selecting
@@ -59,21 +61,23 @@ entries with ~C-. SPC~ then ~C-. A j~ joins them, in order, into one copy.
 
 ** Emoji and symbols
 
-# [[./assets/emoji.png]]
+[[./assets/emoji.png]]
+
+[[./assets/emoji-zh.png]]
 
 ~e~ searches the emoji names macOS ships, in English and Chinese, and every
 other Unicode character by name.  Emoji are drawn in color at text height.
 
 ** Dictionary
 
-# [[./assets/dictionary.png]]
+[[./assets/dictionary.png]]
 
 ~d~ previews a definition from Apple's dictionaries as you type; Return
 shows the whole entry.  Needs the osx-dictionary package.
 
 ** Snippets
 
-# [[./assets/snippets.png]]
+[[./assets/snippets.png]]
 
 ~t~ lists the headings of an Org file of templates.  Placeholders such as
 ~{clipboard}~, ~{date offset="+1d"}~, ~{input:Name}~ and
