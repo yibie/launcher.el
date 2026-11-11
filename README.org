@@ -1,16 +1,132 @@
 #+TITLE: launcher.el
 
-Launch macOS applications from Emacs.
+A Raycast-style launcher that lives in Emacs: applications, files, system
+commands, clipboard history, emoji, the dictionary, snippets and web
+searches, behind one input box and one key.
 
-[[./assets/screenshot.png]]
+This is yibie's fork of [[https://github.com/xiaoxinghu/launcher.el][xiaoxinghu/launcher.el]], by way of tuyafeng's
+~develop~ branch.  The core is upstream's; the tools below are the ones I
+use every day, summoned in a small popup frame from any application.
+
+# [[./assets/overview.png]]
+
+* What it does
+
+Each tool sits behind a prefix.  Type the prefix, a space and a query.
+
+| Input              | Tool                  | Return                                     |
+|--------------------+-----------------------+--------------------------------------------|
+| ~safari~           | applications          | launches the app                           |
+| ~12 * 7.5~         | calculator            | copies ~90~                                |
+| ~f stackwm readme~ | files (rg + fzf)      | opens the file                             |
+| ~z nova~           | directories (zoxide)  | opens the directory in Dired               |
+| ~> dark~           | system commands       | toggles dark mode                          |
+| ~c~                | clipboard history     | copies the entry again                     |
+| ~e heart~, ~e 红色~ | emoji and symbols     | copies the character                       |
+| ~d serendipity~    | Apple Dictionary      | shows the definition                       |
+| ~t~                | snippets              | fills the placeholders and copies the text |
+| ~w emacs~          | multi-engine search   | opens the search                           |
+| ~s~                | bookmarked sites      | opens the link                             |
+
+Anything that only copies a result runs ~launcher-after-copy-hook~, so the
+popup can hand the focus back to the application you are about to paste in.
+
+** Files and directories
+
+# [[./assets/files.png]]
+
+~f~ searches ~launcher-files-directories~ without Spotlight: ripgrep lists
+the files once, in the background, and ~fzf --filter~ ranks that list on
+every keystroke, in about 50 ms for 280,000 files.  ~z~ lists the
+directories zoxide knows, most used first.
+
+** System commands
+
+# [[./assets/system.png]]
+
+~>~ offers 30 macOS commands written for this fork: dark mode, display
+sleep, lock, sleep, restart, shut down, log out, caffeinate, empty Trash,
+version, hardware, external IP and System Settings panels.  Destructive
+commands ask first.  ~launcher-system-define~ adds your own.
+
+** Clipboard history
+
+# [[./assets/clipboard.png]]
+
+~c~ lists the kill ring, with what other applications copied folded in.
+With Embark, ~C-. e~ edits an entry, ~C-. d~ deletes it, and selecting
+entries with ~C-. SPC~ then ~C-. A j~ joins them, in order, into one copy.
+
+** Emoji and symbols
+
+# [[./assets/emoji.png]]
+
+~e~ searches the emoji names macOS ships, in English and Chinese, and every
+other Unicode character by name.  Emoji are drawn in color at text height.
+
+** Dictionary
+
+# [[./assets/dictionary.png]]
+
+~d~ previews a definition from Apple's dictionaries as you type; Return
+shows the whole entry.  Needs the osx-dictionary package.
+
+** Snippets
+
+# [[./assets/snippets.png]]
+
+~t~ lists the headings of an Org file of templates.  Placeholders such as
+~{clipboard}~, ~{date offset="+1d"}~, ~{input:Name}~ and
+~{choice:Tone|Formal,Casual}~ are filled before the text is copied.
 
 * Installation
 
+With Elpaca:
+
+#+begin_src emacs-lisp
+(elpaca (launcher :host github :repo "yibie/launcher.el" :branch "main"))
+#+end_src
+
+Or with ~use-package~ on Emacs 30:
+
 #+begin_src emacs-lisp
 (use-package launcher
-  :vc (:url "https://github.com/xiaoxinghu/launcher.el" :rev :newest)
+  :vc (:url "https://github.com/yibie/launcher.el" :branch "main")
   :bind ("C-c l" . launcher))
 #+end_src
+
+Then register the tools you want:
+
+#+begin_src emacs-lisp
+(require 'launcher-files)
+(require 'launcher-system)
+(require 'launcher-clipboard)
+(require 'launcher-characters)
+(require 'launcher-osx-dictionary)
+(require 'launcher-snippets)
+(require 'launcher-web)
+
+(setq launcher-sort-function #'launcher-sort-by-history
+      launcher-snippets-file "~/notes/snippets.org"
+      launcher-sites-file "~/notes/sites.org"
+      launcher-tools
+      (list (launcher-sites-tool nil)
+            (launcher-sites-tool "s")
+            (launcher-web-search-tool "w")
+            (launcher-files-tool "f")
+            (launcher-zoxide-tool "z")
+            (launcher-system-tool ">")
+            (launcher-clipboard-tool "c")
+            (launcher-characters-tool "e")
+            '("d" :name "Dictionary"
+              :query launcher-osx-dictionary-query :debounce 0.2
+              :submit launcher-osx-dictionary-submit)
+            (launcher-snippets-tool "t")))
+#+end_src
+
+~f~ needs ~rg~ and ~fzf~, ~z~ needs ~zoxide~, and ~d~ needs the
+osx-dictionary package and Xcode's command line tools.  The rest of this
+file is the reference: upstream's core first, then this fork's additions.
 
 * Usage
 
@@ -400,7 +516,7 @@ itself opens nothing: no Dictionary.app, browser, second prompt, window or frame
 
 * Additions in this fork
 
-This fork (~yibie/launcher.el~, branch ~nova~) adds to upstream:
+This fork (~yibie/launcher.el~, branch ~main~) adds to upstream:
 
 - ~launcher-sort-function~ :: Orders results for any completion UI.  Set it
   to ~launcher-sort-by-history~ to put recent selections first and keep the
